@@ -1,0 +1,10 @@
+[package]
+
+name = "dht"
+version = "0.1.0"
+authors = ["Dmitry Tantsur <divius.inside@gmail.com>"]
+
+[lib]
+
+name = "dht"
+path = "src/lib.rs"
