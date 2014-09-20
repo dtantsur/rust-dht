@@ -6,10 +6,8 @@ extern crate sync;
 #[phase(plugin, link)]
 extern crate log;
 
-pub use hashid::HashId;
-pub use node::Node;
+pub use base::HashId;
+pub use base::Node;
 
+pub mod base;
 pub mod kademlia;
-
-mod hashid;
-mod node;
