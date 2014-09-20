@@ -1,3 +1,6 @@
+#![crate_name = "dht"]
+#![crate_type = "lib"]
+
 #![feature(struct_variant)]
 #![feature(phase)]
 
