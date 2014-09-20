@@ -1,5 +1,6 @@
 use std::num::Zero;
 
+use super::GenericNodeTable;
 use super::HashId;
 use super::Node;
 
@@ -24,16 +25,18 @@ impl NodeTable {
         }
     }
 
-    pub fn update_node(&mut self, node: &Node) -> bool {
-        assert!(node.id != self.own_id);
-        let bucket = self.bucket_number(&node.id);
-        self.buckets.get_mut(bucket).update(node)
-    }
-
     fn bucket_number(&self, id: &HashId) -> uint {
         let diff = id.distance_to(&self.own_id);
         assert!(!diff.is_zero());
         diff.bits() - 1
+    }
+}
+
+impl GenericNodeTable for NodeTable {
+    fn update(&mut self, node: &Node) -> bool {
+        assert!(node.id != self.own_id);
+        let bucket = self.bucket_number(&node.id);
+        self.buckets.get_mut(bucket).update(node)
     }
 }
 
@@ -79,6 +82,7 @@ impl KBucket {
 #[cfg(test)]
 mod test {
     use std::from_str::FromStr;
+    use super::super::GenericNodeTable;
     use super::super::HashId;
     use super::super::Node;
     use super::KBucket;
@@ -108,12 +112,12 @@ mod test {
     }
 
     #[test]
-    fn test_nodetable_update_node() {
+    fn test_nodetable_update() {
         let mut n = NodeTable::new(HashId::from_uint(42), 1);
         let node = new_node(41);
-        n.update_node(&node);
+        n.update(&node);
         assert_eq!(1, n.buckets[1].data.len());
-        n.update_node(&node);
+        n.update(&node);
         assert_eq!(1, n.buckets[1].data.len());
     }
 

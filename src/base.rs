@@ -5,6 +5,11 @@ use num::BigUint;
 static HASH_SIZE: uint = 160;
 
 
+pub trait GenericNodeTable {
+    fn update(&mut self, node: &Node) -> bool;
+}
+
+
 #[deriving(PartialEq, Eq, Clone, Show)]
 pub struct HashId {
     value: BigUint,
