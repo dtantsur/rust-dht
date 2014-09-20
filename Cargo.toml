@@ -4,6 +4,10 @@ name = "dht"
 version = "0.1.0"
 authors = ["Dmitry Tantsur <divius.inside@gmail.com>"]
 
+[dependencies.num]
+
+git = "https://github.com/rust-lang/num"
+
 [lib]
 
 name = "dht"
