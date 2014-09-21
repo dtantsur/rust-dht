@@ -23,7 +23,10 @@ extern crate sync;
 extern crate log;
 
 pub use base::GenericNodeTable;
+pub use base::GenericRpc;
 pub use base::Node;
+pub use service::Service;
 
 pub mod base;
 pub mod kademlia;
+pub mod service;

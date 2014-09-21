@@ -1,4 +1,5 @@
 use std::io::net::ip::SocketAddr;
+use std::sync::Future;
 use num::BigUint;
 
 
@@ -10,6 +11,13 @@ pub trait GenericNodeTable {
     fn update(&mut self, node: &Node) -> bool;
     /// Find given number of node, closest to given ID.
     fn find(&self, id: &BigUint, count: uint) -> Vec<Node>;
+}
+
+
+/// Trait representing RPC implementation.
+pub trait GenericRpc {
+    /// Ping a node, returning true if node seems reachable.
+    fn ping(&self, node: &Node) -> Future<bool>;
 }
 
 
