@@ -1,3 +1,10 @@
+//! DHT implementation based on Kademlia.
+//!
+//! See [original paper](http://pdos.csail.mit.edu/%7Epetar/papers/maymounkov-kademlia-lncs.pdf)
+//! for details. The most essential difference is that when k-bucket is full,
+//! no RPC call is done. It is up to upper-level code to ensure proper clean up
+//! using `pop_oldest` call.
+
 use std::num::Zero;
 
 use super::GenericNodeTable;
@@ -5,11 +12,17 @@ use super::HashId;
 use super::Node;
 
 
+/// Kademlia node table.
+///
+/// Keeps nodes in a number of k-buckets (equal to bit size of ID in a system,
+/// usually 160), where N-th k-bucket contains nodes with distance
+/// from 2^N to 2^(N+1) from our node.
 pub struct NodeTable {
     own_id: HashId,
     buckets: Vec<KBucket>,
 }
 
+/// K-bucket - structure for keeping last nodes in Kademlia.
 struct KBucket {
     data: Vec<Node>,
     size: uint
@@ -17,6 +30,10 @@ struct KBucket {
 
 
 impl NodeTable {
+    /// Create a new node table.
+    ///
+    /// `own_id` -- ID of the current node (used to calculate metrics).
+    /// `bucket_size` -- maximum size of every K-Bucket.
     pub fn new(own_id: HashId, bucket_size: uint) -> NodeTable {
         NodeTable {
             own_id: own_id,

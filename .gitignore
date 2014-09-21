@@ -2,3 +2,4 @@
 local.sh
 .*.swp
 Cargo.lock
+doc/

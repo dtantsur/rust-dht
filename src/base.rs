@@ -5,7 +5,11 @@ use num::BigUint;
 static HASH_SIZE: uint = 160;
 
 
+/// Trait representing table with known nodes.
+///
+/// Keeps some reasonable subset of known nodes passed to `update`.
 pub trait GenericNodeTable {
+    /// Store or update node in the table.
     fn update(&mut self, node: &Node) -> bool;
 }
 
@@ -16,6 +20,10 @@ pub struct HashId {
 }
 
 
+/// Structure representing a node in system.
+///
+/// Every node has an address (IP and port) and a numeric ID, which is
+/// used to calculate metrics and look up data.
 #[deriving(Clone, Show)]
 pub struct Node {
     pub address: SocketAddr,
