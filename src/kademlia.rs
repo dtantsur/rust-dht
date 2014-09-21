@@ -6,10 +6,15 @@
 //! using `pop_oldest` call.
 
 use std::num::Zero;
+use num::BigUint;
 
 use super::GenericNodeTable;
-use super::HashId;
 use super::Node;
+
+
+// TODO(divius): make public?
+static BUCKET_SIZE: uint = 1024;
+static HASH_SIZE: uint = 160;
 
 
 /// Kademlia node table.
@@ -18,7 +23,8 @@ use super::Node;
 /// usually 160), where N-th k-bucket contains nodes with distance
 /// from 2^N to 2^(N+1) from our node.
 pub struct NodeTable {
-    own_id: HashId,
+    own_id: BigUint,
+    // TODO(divius): convert to more appropriate data structure
     buckets: Vec<KBucket>,
 }
 
@@ -33,17 +39,27 @@ impl NodeTable {
     /// Create a new node table.
     ///
     /// `own_id` -- ID of the current node (used to calculate metrics).
-    /// `bucket_size` -- maximum size of every K-Bucket.
-    pub fn new(own_id: HashId, bucket_size: uint) -> NodeTable {
+    pub fn new(own_id: BigUint) -> NodeTable {
+        NodeTable::with_details(own_id, BUCKET_SIZE, HASH_SIZE)
+    }
+
+    // TODO(divius): make public
+    fn with_details(own_id: BigUint, bucket_size: uint,
+                    hash_size: uint) -> NodeTable {
         NodeTable {
             own_id: own_id,
-            buckets: Vec::from_fn(HashId::hash_size(),
+            buckets: Vec::from_fn(hash_size,
                                   |_| KBucket::new(bucket_size)),
         }
     }
 
-    fn bucket_number(&self, id: &HashId) -> uint {
-        let diff = id.distance_to(&self.own_id);
+    #[inline]
+    fn distance(id1: &BigUint, id2: &BigUint) -> BigUint {
+        id1.bitxor(id2)
+    }
+
+    fn bucket_number(&self, id: &BigUint) -> uint {
+        let diff = NodeTable::distance(&self.own_id, id);
         assert!(!diff.is_zero());
         diff.bits() - 1
     }
@@ -84,7 +100,7 @@ impl KBucket {
     }
 
     fn _update_position(&mut self, node: &Node) {
-        // TODO(dtantsur): 1. optimize, 2. make it less ugly
+        // TODO(divius): 1. optimize, 2. make it less ugly
         let mut new_data = Vec::with_capacity(self.data.len());
         new_data.extend(self.data.iter()
                         .filter(|x| x.id != node.id)
@@ -99,9 +115,10 @@ impl KBucket {
 #[cfg(test)]
 mod test {
     use std::from_str::FromStr;
+    use std::num::FromPrimitive;
     use super::super::GenericNodeTable;
-    use super::super::HashId;
     use super::super::Node;
+    use super::HASH_SIZE;
     use super::KBucket;
     use super::NodeTable;
 
@@ -109,28 +126,29 @@ mod test {
 
     fn new_node(id: uint) -> Node {
         Node {
-            id: HashId::from_uint(id),
+            id: FromPrimitive::from_uint(id).unwrap(),
             address: FromStr::from_str(ADDR).unwrap()
         }
     }
 
     #[test]
     fn test_nodetable_new() {
-        let n = NodeTable::new(HashId::from_uint(42), 5);
-        assert_eq!(HashId::hash_size(), n.buckets.len());
+        let n = NodeTable::new(FromPrimitive::from_uint(42).unwrap());
+        assert_eq!(HASH_SIZE, n.buckets.len());
     }
 
     #[test]
     fn test_nodetable_bucket_number() {
-        let n = NodeTable::new(HashId::from_uint(42), 5);
-        let id = HashId::from_uint(41);
+        let n = NodeTable::new(FromPrimitive::from_uint(42).unwrap());
+        let id = FromPrimitive::from_uint(41).unwrap();
         // 42 xor 41 == 3
         assert_eq!(1, n.bucket_number(&id));
     }
 
     #[test]
     fn test_nodetable_update() {
-        let mut n = NodeTable::new(HashId::from_uint(42), 1);
+        let mut n = NodeTable::with_details(
+            FromPrimitive::from_uint(42).unwrap(), 1, HASH_SIZE);
         let node = new_node(41);
         n.update(&node);
         assert_eq!(1, n.buckets[1].data.len());

@@ -27,11 +27,7 @@ Status
 
 Currently implemented or have a good progress:
 
-* `HashId` struct: represents ID within the system.
-   Currently hardcoded to use 160 bits and XOR metric, will be more
-   generic in the future.
-
-* `Node` struct: endpoint address + `HashId`.
+* `Node` struct: endpoint address + ID, representing this Node in the system.
 
 * `kademlia::KBucket`: k-bucket implementation, without replacing of nodes.
    Goal is to have periodic task taking away all last elements, pinging them

@@ -23,7 +23,6 @@ extern crate sync;
 extern crate log;
 
 pub use base::GenericNodeTable;
-pub use base::HashId;
 pub use base::Node;
 
 pub mod base;
