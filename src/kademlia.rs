@@ -60,8 +60,11 @@ impl NodeTable {
 
     fn bucket_number(&self, id: &BigUint) -> uint {
         let diff = NodeTable::distance(&self.own_id, id);
-        assert!(!diff.is_zero());
-        diff.bits() - 1
+        debug_assert!(!diff.is_zero());
+        let res = diff.bits() - 1;
+        debug!("ID {} relative to own ID {} falls into bucket {}",
+               id, self.own_id, res);
+        res
     }
 }
 
@@ -70,6 +73,13 @@ impl GenericNodeTable for NodeTable {
         assert!(node.id != self.own_id);
         let bucket = self.bucket_number(&node.id);
         self.buckets.get_mut(bucket).update(node)
+    }
+
+    fn find(&self, id: &BigUint, count: uint) -> Vec<Node> {
+        debug_assert!(count > 0);
+        assert!(*id != self.own_id)
+        let bucket = self.bucket_number(id);
+        self.buckets[bucket].find(id, count)
     }
 }
 
@@ -84,7 +94,7 @@ impl KBucket {
 
     pub fn update(&mut self, node: &Node) -> bool {
         if self.data.iter().any(|x| x.id == node.id) {
-            self._update_position(node);
+            self.update_position(node);
             debug!("Promoted node {} to the top of kbucket", node);
             true
         }
@@ -99,7 +109,16 @@ impl KBucket {
         }
     }
 
-    fn _update_position(&mut self, node: &Node) {
+    pub fn find(&self, id: &BigUint, count: uint) -> Vec<Node> {
+        let sort_fn = |a: &Node, b: &Node| {
+            NodeTable::distance(id, &a.id).cmp(&NodeTable::distance(id, &b.id))
+        };
+        let mut data_copy = self.data.clone();
+        data_copy.sort_by(sort_fn);
+        Vec::from_slice(data_copy.slice(0, count))
+    }
+
+    fn update_position(&mut self, node: &Node) {
         // TODO(divius): 1. optimize, 2. make it less ugly
         let mut new_data = Vec::with_capacity(self.data.len());
         new_data.extend(self.data.iter()
@@ -116,6 +135,7 @@ impl KBucket {
 mod test {
     use std::from_str::FromStr;
     use std::num::FromPrimitive;
+    use num::BigUint;
     use super::super::GenericNodeTable;
     use super::super::Node;
     use super::HASH_SIZE;
@@ -129,6 +149,19 @@ mod test {
             id: FromPrimitive::from_uint(id).unwrap(),
             address: FromStr::from_str(ADDR).unwrap()
         }
+    }
+
+    fn prepare(count: uint) -> KBucket {
+        KBucket {
+            data: Vec::from_fn(count, |i| new_node(i)),
+            size: 3,
+        }
+    }
+
+    fn assert_node_list_eq(expected: &[&Node], actual: &Vec<Node>) {
+        let act: Vec<BigUint> = actual.iter().map(|x| x.id.clone()).collect();
+        let exp: Vec<BigUint> = expected.iter().map(|x| x.id.clone()).collect();
+        assert_eq!(exp, act);
     }
 
     #[test]
@@ -156,11 +189,16 @@ mod test {
         assert_eq!(1, n.buckets[1].data.len());
     }
 
-    fn prepare(count: uint) -> KBucket {
-        KBucket {
-            data: Vec::from_fn(count, |i| new_node(i)),
-            size: 3,
-        }
+    #[test]
+    fn test_nodetable_find() {
+        let n = NodeTable {
+            buckets: vec![prepare(1), prepare(3), prepare(1)],
+            own_id: FromPrimitive::from_uint(0).unwrap()
+        };
+        // 0 xor 3 = 3, 1 xor 3 = 2, 2 xor 3 = 1
+        let id = FromPrimitive::from_uint(3).unwrap();
+        assert_node_list_eq([&n.buckets[1].data[2]],
+                            &n.find(&id, 1));
     }
 
     #[test]
@@ -193,5 +231,15 @@ mod test {
         let mut b = prepare(3);  // 3 is size
         let node = new_node(42);
         assert!(!b.update(&node))
+    }
+
+    #[test]
+    fn test_kbucket_find() {
+        let b = prepare(3);
+        // Nodes with ID's 0, 1, 2; assume our ID is also 2 (impossible IRL)
+        let id = FromPrimitive::from_uint(2).unwrap();
+        // 0 xor 2 = 2, 1 xor 2 = 3, 2 xor 2 = 0
+        assert_node_list_eq([&b.data[2]], &b.find(&id, 1));
+        assert_node_list_eq([&b.data[2], &b.data[0]], &b.find(&id, 2));
     }
 }

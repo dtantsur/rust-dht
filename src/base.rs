@@ -8,6 +8,8 @@ use num::BigUint;
 pub trait GenericNodeTable {
     /// Store or update node in the table.
     fn update(&mut self, node: &Node) -> bool;
+    /// Find given number of node, closest to given ID.
+    fn find(&self, id: &BigUint, count: uint) -> Vec<Node>;
 }
 
 
