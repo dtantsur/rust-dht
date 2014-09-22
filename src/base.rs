@@ -6,7 +6,7 @@ use num::BigUint;
 /// Trait representing table with known nodes.
 ///
 /// Keeps some reasonable subset of known nodes passed to `update`.
-pub trait GenericNodeTable {
+pub trait GenericNodeTable : Send + Sync {
     /// Store or update node in the table.
     fn update(&mut self, node: &Node) -> bool;
     /// Find given number of node, closest to given ID.
@@ -15,7 +15,7 @@ pub trait GenericNodeTable {
 
 
 /// Trait representing RPC implementation.
-pub trait GenericRpc {
+pub trait GenericRpc : Send + Sync {
     /// Ping a node, returning true if node seems reachable.
     fn ping(&self, node: &Node) -> Future<bool>;
 }
