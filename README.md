@@ -3,6 +3,7 @@ rust-dht
 
 [![Build
 Status](https://travis-ci.org/Divius/rust-dht.svg)](https://travis-ci.org/Divius/rust-dht)
+[Online Documentation](http://www.rust-ci.org/Divius/rust-dht/doc/dht/)
 
 A work-in-progress of
 [Kademlia](http://pdos.csail.mit.edu/~petar/papers/maymounkov-kademlia-lncs.pdf)-based
@@ -18,7 +19,7 @@ parts:
 1. DHT neighborhood table implementation, will be represented by
    `GenericNodeTable` trait and `kademlia::NodeTable` implementation.
 2. RPC implementation, will be represented by `GenericRpc` trait,
-   exact implementation to by defined, likely some JSON-over-UDP.
+   exact implementation to by defined, likely BitTorrent one.
 3. Generic struct `Service<TNodeTable: GenericNodeTable, TRpc: GenericRpc>`
    that will connect previous two.
 
