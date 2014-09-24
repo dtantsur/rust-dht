@@ -62,6 +62,10 @@ mod test {
         fn ping(&self, node: &Node) -> Future<bool> {
             Future::from_value(true)
         }
+        #[allow(unused_variable)]
+        fn find_node(&self, id: &BigUint) -> Future<Node> {
+            Future::from_value(new_node(100500))
+        }
     }
 
     static ADDR: &'static str = "127.0.0.1:80";

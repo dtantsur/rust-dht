@@ -19,8 +19,9 @@ pub trait GenericNodeTable : Send + Sync {
 #[experimental]
 pub trait GenericRpc : Send + Sync {
     /// Ping a node, returning true if node seems reachable.
-    #[unstable]
     fn ping(&self, node: &Node) -> Future<bool>;
+    /// Find a node with given ID.
+    fn find_node(&self, id: &BigUint) -> Future<Node>;
 }
 
 
