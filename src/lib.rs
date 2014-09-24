@@ -27,6 +27,9 @@ pub use base::GenericRpc;
 pub use base::Node;
 pub use service::Service;
 
+#[unstable]
 pub mod base;
+#[unstable]
 pub mod kademlia;
+#[experimental]
 pub mod service;

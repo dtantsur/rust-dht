@@ -22,6 +22,7 @@ static HASH_SIZE: uint = 160;
 /// Keeps nodes in a number of k-buckets (equal to bit size of ID in a system,
 /// usually 160), where N-th k-bucket contains nodes with distance
 /// from 2^N to 2^(N+1) from our node.
+#[unstable]
 pub struct NodeTable {
     own_id: BigUint,
     // TODO(divius): convert to more appropriate data structure
@@ -35,6 +36,7 @@ struct KBucket {
 }
 
 
+#[unstable]
 impl NodeTable {
     /// Create a new node table.
     ///
@@ -68,6 +70,7 @@ impl NodeTable {
     }
 }
 
+#[unstable]
 impl GenericNodeTable for NodeTable {
     fn update(&mut self, node: &Node) -> bool {
         assert!(node.id != self.own_id);

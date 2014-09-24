@@ -6,6 +6,7 @@ use num::BigUint;
 /// Trait representing table with known nodes.
 ///
 /// Keeps some reasonable subset of known nodes passed to `update`.
+#[unstable]
 pub trait GenericNodeTable : Send + Sync {
     /// Store or update node in the table.
     fn update(&mut self, node: &Node) -> bool;
@@ -15,8 +16,10 @@ pub trait GenericNodeTable : Send + Sync {
 
 
 /// Trait representing RPC implementation.
+#[experimental]
 pub trait GenericRpc : Send + Sync {
     /// Ping a node, returning true if node seems reachable.
+    #[unstable]
     fn ping(&self, node: &Node) -> Future<bool>;
 }
 
@@ -26,6 +29,7 @@ pub trait GenericRpc : Send + Sync {
 /// Every node has an address (IP and port) and a numeric ID, which is
 /// used to calculate metrics and look up data.
 #[deriving(Clone, Show)]
+#[unstable]
 pub struct Node {
     pub address: SocketAddr,
     pub id: BigUint

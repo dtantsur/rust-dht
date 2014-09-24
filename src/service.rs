@@ -9,6 +9,7 @@ use super::GenericRpc;
 
 // TODO(divius): implement
 /// Structure representing main DHT service.
+#[experimental]
 pub struct Service<TNodeTable: GenericNodeTable, TRpc: GenericRpc> {
     node_table: Arc<RWLock<TNodeTable>>,
     rpc: Arc<TRpc>,
@@ -16,6 +17,7 @@ pub struct Service<TNodeTable: GenericNodeTable, TRpc: GenericRpc> {
 
 
 impl<TNodeTable: GenericNodeTable, TRpc: GenericRpc> Service<TNodeTable, TRpc> {
+    #[experimental]
     pub fn new(node_table: TNodeTable, rpc: TRpc) -> Service<TNodeTable, TRpc> {
         Service {
             node_table: Arc::new(RWLock::new(node_table)),
