@@ -32,6 +32,8 @@ pub trait GenericRpc : Send + Sync {
 #[deriving(Clone, Show)]
 #[unstable]
 pub struct Node {
+    /// Network address of the node.
     pub address: SocketAddr,
+    /// ID of the node.
     pub id: BigUint
 }
