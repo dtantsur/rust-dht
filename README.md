@@ -7,21 +7,7 @@ Status](https://travis-ci.org/Divius/rust-dht.svg)](https://travis-ci.org/Divius
 
 A work-in-progress of
 [Kademlia](http://pdos.csail.mit.edu/~petar/papers/maymounkov-kademlia-lncs.pdf)-based
-DHT in Rust language.
-
-Goals
------
-
-The goal of this project is to provide flexible implementation of DHT
-for different kind of Rust applications. There will be 3 loosely coupled
-parts:
-
-1. DHT neighborhood table implementation, will be represented by
-   `GenericNodeTable` trait and `kademlia::NodeTable` implementation.
-2. RPC implementation, will be represented by `GenericRpc` trait,
-   exact implementation to by defined, likely BitTorrent one.
-3. Generic struct `Service<TNodeTable: GenericNodeTable, TRpc: GenericRpc>`
-   that will connect previous two.
+DHT in Rust language, see documentation for details.
 
 Status
 ------
@@ -36,3 +22,7 @@ Currently implemented or have a good progress:
    interdependency between node table and RPC.
 
 * `kademlia::NodeTable`: node table with k-buckets.
+
+Just started or stubs:
+
+* `Service` struct glueing together RPC and node table.
