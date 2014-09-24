@@ -12,6 +12,8 @@ pub trait GenericNodeTable : Send + Sync {
     fn update(&mut self, node: &Node) -> bool;
     /// Find given number of node, closest to given ID.
     fn find(&self, id: &BigUint, count: uint) -> Vec<Node>;
+    /// Pop expired or the oldest nodes from table for inspection.
+    fn pop_oldest(&mut self) -> Vec<Node>;
 }
 
 

@@ -54,6 +54,9 @@ mod test {
                 _ => vec![]
             }
         }
+        fn pop_oldest(&mut self) -> Vec<Node> {
+            vec![]
+        }
     }
 
     struct DummyRpc;

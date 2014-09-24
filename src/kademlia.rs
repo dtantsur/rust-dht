@@ -84,6 +84,15 @@ impl GenericNodeTable for NodeTable {
         let bucket = self.bucket_number(id);
         self.buckets[bucket].find(id, count)
     }
+
+    fn pop_oldest(&mut self) -> Vec<Node> {
+        // For every full k-bucket, pop the last.
+        // TODO(divius): TTL expiration?
+        self.buckets.iter_mut()
+            .filter(|b| { !b.data.is_empty() && b.size == b.data.len() })
+            .map(|b| b.data.remove(0).unwrap())
+            .collect()
+    }
 }
 
 impl KBucket {
@@ -182,14 +191,22 @@ mod test {
     }
 
     #[test]
-    fn test_nodetable_update() {
+    fn test_nodetable_pop_oldest() {
         let mut n = NodeTable::with_details(
-            FromPrimitive::from_uint(42).unwrap(), 1, HASH_SIZE);
-        let node = new_node(41);
-        n.update(&node);
+            FromPrimitive::from_uint(42).unwrap(), 2, HASH_SIZE);
+        n.update(&new_node(41));
+        n.update(&new_node(43));
+        n.update(&new_node(40));
+        assert_eq!(0, n.buckets[2].data.len());
+        assert_eq!(2, n.buckets[1].data.len());
+        assert_eq!(1, n.buckets[0].data.len());
+        let nodes = n.pop_oldest();
+        assert_eq!(1, nodes.len());
+        assert_eq!(41, nodes[0].id.to_int().unwrap());
+        assert_eq!(0, n.buckets[2].data.len());
         assert_eq!(1, n.buckets[1].data.len());
-        n.update(&node);
-        assert_eq!(1, n.buckets[1].data.len());
+        assert_eq!(1, n.buckets[0].data.len());
+        assert_eq!(40, n.buckets[1].data[0].id.to_int().unwrap());
     }
 
     #[test]
@@ -202,6 +219,17 @@ mod test {
         let id = FromPrimitive::from_uint(3).unwrap();
         assert_node_list_eq([&n.buckets[1].data[2]],
                             &n.find(&id, 1));
+    }
+
+    #[test]
+    fn test_nodetable_update() {
+        let mut n = NodeTable::with_details(
+            FromPrimitive::from_uint(42).unwrap(), 1, HASH_SIZE);
+        let node = new_node(41);
+        n.update(&node);
+        assert_eq!(1, n.buckets[1].data.len());
+        n.update(&node);
+        assert_eq!(1, n.buckets[1].data.len());
     }
 
     #[test]
