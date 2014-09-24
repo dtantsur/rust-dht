@@ -118,7 +118,7 @@ impl KBucket {
         };
         let mut data_copy = self.data.clone();
         data_copy.sort_by(sort_fn);
-        Vec::from_slice(data_copy.slice(0, count))
+        data_copy.slice(0, count).to_vec()
     }
 
     fn update_position(&mut self, node: &Node) {
@@ -217,7 +217,7 @@ mod test {
         let node = new_node(42);
         assert!(b.update(&node))
         assert_eq!(2, b.data.len());
-        assert_eq!(node.id, b.data.get(1).id);
+        assert_eq!(node.id, b.data[1].id);
     }
 
     #[test]
@@ -226,7 +226,7 @@ mod test {
         let node = new_node(0);
         assert!(b.update(&node))
         assert_eq!(2, b.data.len());
-        assert_eq!(node.id, b.data.get(1).id);
+        assert_eq!(node.id, b.data[1].id);
     }
 
     #[test]
