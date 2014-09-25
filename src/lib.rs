@@ -18,6 +18,7 @@
 #![feature(phase)]
 
 extern crate num;
+extern crate serialize;
 extern crate sync;
 #[phase(plugin, link)]
 extern crate log;
