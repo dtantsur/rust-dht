@@ -44,6 +44,8 @@ pub mod base;
 #[unstable]
 pub mod kademlia;
 #[experimental]
+pub mod krpc;
+#[experimental]
 pub mod service;
 
 mod utils;
