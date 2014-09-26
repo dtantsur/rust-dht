@@ -26,6 +26,7 @@
 #![feature(struct_variant)]
 #![feature(phase)]
 
+extern crate bencode;
 extern crate num;
 extern crate serialize;
 extern crate sync;

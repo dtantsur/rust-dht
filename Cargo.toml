@@ -8,6 +8,10 @@ authors = ["Dmitry Tantsur <divius.inside@gmail.com>"]
 
 git = "https://github.com/rust-lang/num"
 
+[dependencies.bencode]
+
+git = "https://github.com/arjantop/rust-bencode"
+
 [lib]
 
 name = "dht"
