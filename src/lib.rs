@@ -22,6 +22,7 @@
 
 #![crate_name = "dht"]
 #![crate_type = "lib"]
+#![unstable]
 
 #![feature(struct_variant)]
 #![feature(phase)]
