@@ -23,6 +23,8 @@ Currently implemented or have a good progress:
 
 * `kademlia::NodeTable`: node table with k-buckets.
 
+* `krpc::Package`: network package format for KRPC (BitTorrent DHT RPC).
+
 Just started or stubs:
 
 * `Service` struct glueing together RPC and node table.
