@@ -3,7 +3,7 @@ pub mod test {
     use std::from_str::FromStr;
     use std::num::FromPrimitive;
 
-    use num::BigUint;
+    use num;
 
     use super::super::Node;
 
@@ -17,7 +17,7 @@ pub mod test {
         }
     }
 
-    pub fn uint_to_id(id: uint) -> BigUint {
+    pub fn uint_to_id(id: uint) -> num::BigUint {
         FromPrimitive::from_uint(id).unwrap()
     }
 }

@@ -15,14 +15,15 @@
 //! using `pop_oldest` call.
 
 use std::num::Zero;
-use num::BigUint;
+
+use num;
 
 use super::GenericNodeTable;
 use super::Node;
 
 
 // TODO(divius): make public?
-static BUCKET_SIZE: uint = 1024;
+static BUCKET_SIZE: uint = 64;
 static HASH_SIZE: uint = 160;
 
 
@@ -33,7 +34,7 @@ static HASH_SIZE: uint = 160;
 /// from 2^N to 2^(N+1) from our node.
 #[unstable]
 pub struct NodeTable {
-    own_id: BigUint,
+    own_id: num::BigUint,
     // TODO(divius): convert to more appropriate data structure
     buckets: Vec<KBucket>,
 }
@@ -50,12 +51,12 @@ impl NodeTable {
     /// Create a new node table.
     ///
     /// `own_id` -- ID of the current node (used to calculate metrics).
-    pub fn new(own_id: BigUint) -> NodeTable {
+    pub fn new(own_id: num::BigUint) -> NodeTable {
         NodeTable::with_details(own_id, BUCKET_SIZE, HASH_SIZE)
     }
 
     // TODO(divius): make public
-    fn with_details(own_id: BigUint, bucket_size: uint,
+    fn with_details(own_id: num::BigUint, bucket_size: uint,
                     hash_size: uint) -> NodeTable {
         NodeTable {
             own_id: own_id,
@@ -65,11 +66,11 @@ impl NodeTable {
     }
 
     #[inline]
-    fn distance(id1: &BigUint, id2: &BigUint) -> BigUint {
+    fn distance(id1: &num::BigUint, id2: &num::BigUint) -> num::BigUint {
         id1.bitxor(id2)
     }
 
-    fn bucket_number(&self, id: &BigUint) -> uint {
+    fn bucket_number(&self, id: &num::BigUint) -> uint {
         let diff = NodeTable::distance(&self.own_id, id);
         debug_assert!(!diff.is_zero());
         let res = diff.bits() - 1;
@@ -87,7 +88,7 @@ impl GenericNodeTable for NodeTable {
         self.buckets.get_mut(bucket).update(node)
     }
 
-    fn find(&self, id: &BigUint, count: uint) -> Vec<Node> {
+    fn find(&self, id: &num::BigUint, count: uint) -> Vec<Node> {
         debug_assert!(count > 0);
         assert!(*id != self.own_id)
         let bucket = self.bucket_number(id);
@@ -130,7 +131,7 @@ impl KBucket {
         }
     }
 
-    pub fn find(&self, id: &BigUint, count: uint) -> Vec<Node> {
+    pub fn find(&self, id: &num::BigUint, count: uint) -> Vec<Node> {
         let sort_fn = |a: &Node, b: &Node| {
             NodeTable::distance(id, &a.id).cmp(&NodeTable::distance(id, &b.id))
         };
@@ -151,16 +152,19 @@ impl KBucket {
 }
 
 
-
 #[cfg(test)]
 mod test {
-    use num::BigUint;
+    use num;
+
     use super::super::GenericNodeTable;
     use super::super::Node;
+
     use super::HASH_SIZE;
     use super::KBucket;
     use super::NodeTable;
+
     use super::super::utils::test;
+
 
     fn prepare(count: uint) -> KBucket {
         KBucket {
@@ -170,8 +174,10 @@ mod test {
     }
 
     fn assert_node_list_eq(expected: &[&Node], actual: &Vec<Node>) {
-        let act: Vec<BigUint> = actual.iter().map(|x| x.id.clone()).collect();
-        let exp: Vec<BigUint> = expected.iter().map(|x| x.id.clone()).collect();
+        let act: Vec<num::BigUint> = actual.iter()
+            .map(|x| x.id.clone()).collect();
+        let exp: Vec<num::BigUint> = expected.iter()
+            .map(|x| x.id.clone()).collect();
         assert_eq!(exp, act);
     }
 

@@ -9,8 +9,7 @@
 
 //! DHT service
 
-use std::sync::Arc;
-use std::sync::RWLock;
+use std::sync;
 
 use super::GenericNodeTable;
 use super::GenericRpc;
@@ -19,18 +18,18 @@ use super::GenericRpc;
 // TODO(divius): implement
 /// Structure representing main DHT service.
 #[experimental]
-pub struct Service<TNodeTable: GenericNodeTable, TRpc: GenericRpc> {
-    node_table: Arc<RWLock<TNodeTable>>,
-    rpc: Arc<TRpc>,
+pub struct Service<TNodeTable:GenericNodeTable, TRpc:GenericRpc> {
+    node_table: sync::Arc<sync::RWLock<TNodeTable>>,
+    rpc: sync::Arc<TRpc>,
 }
 
 
-impl<TNodeTable: GenericNodeTable, TRpc: GenericRpc> Service<TNodeTable, TRpc> {
+impl<TNodeTable:GenericNodeTable, TRpc:GenericRpc> Service<TNodeTable, TRpc> {
     #[experimental]
     pub fn new(node_table: TNodeTable, rpc: TRpc) -> Service<TNodeTable, TRpc> {
         Service {
-            node_table: Arc::new(RWLock::new(node_table)),
-            rpc: Arc::new(rpc),
+            node_table: sync::Arc::new(sync::RWLock::new(node_table)),
+            rpc: sync::Arc::new(rpc),
         }
     }
 }
@@ -38,13 +37,18 @@ impl<TNodeTable: GenericNodeTable, TRpc: GenericRpc> Service<TNodeTable, TRpc> {
 
 #[cfg(test)]
 mod test {
-    use std::sync::Future;
-    use num::BigUint;
+    use std::sync;
+
+    use num;
+
     use super::super::GenericNodeTable;
     use super::super::GenericRpc;
     use super::super::Node;
+
     use super::Service;
+
     use super::super::utils::test;
+
 
     struct DummyNodeTable {
         last_node: Option<Node>,
@@ -56,7 +60,7 @@ mod test {
             true
         }
         #[allow(unused_variable)]
-        fn find(&self, id: &BigUint, count: uint) -> Vec<Node> {
+        fn find(&self, id: &num::BigUint, count: uint) -> Vec<Node> {
             match self.last_node {
                 Some(ref n) if n.id == *id => vec![n.clone()],
                 _ => vec![]
@@ -70,14 +74,15 @@ mod test {
     struct DummyRpc;
     impl GenericRpc for DummyRpc {
         #[allow(unused_variable)]
-        fn ping(&self, node: &Node) -> Future<bool> {
-            Future::from_value(true)
+        fn ping(&self, node: &Node) -> sync::Future<bool> {
+            sync::Future::from_value(true)
         }
         #[allow(unused_variable)]
-        fn find_node(&self, id: &BigUint) -> Future<Node> {
-            Future::from_value(test::new_node(100500))
+        fn find_node(&self, id: &num::BigUint) -> sync::Future<Node> {
+            sync::Future::from_value(test::new_node(100500))
         }
     }
+
 
     #[test]
     fn test_new() {

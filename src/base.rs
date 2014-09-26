@@ -8,11 +8,11 @@
 //
 
 use std::from_str::FromStr;
-use std::io::net::ip::SocketAddr;
-use std::sync::Future;
-use num::BigUint;
-use serialize::{Decodable, Decoder};
-use serialize::{Encodable, Encoder};
+use std::io::net::ip;
+use std::sync;
+
+use num;
+use serialize;
 
 
 /// Trait representing table with known nodes.
@@ -23,21 +23,19 @@ pub trait GenericNodeTable : Send + Sync {
     /// Store or update node in the table.
     fn update(&mut self, node: &Node) -> bool;
     /// Find given number of node, closest to given ID.
-    fn find(&self, id: &BigUint, count: uint) -> Vec<Node>;
+    fn find(&self, id: &num::BigUint, count: uint) -> Vec<Node>;
     /// Pop expired or the oldest nodes from table for inspection.
     fn pop_oldest(&mut self) -> Vec<Node>;
 }
-
 
 /// Trait representing RPC implementation.
 #[experimental]
 pub trait GenericRpc : Send + Sync {
     /// Ping a node, returning true if node seems reachable.
-    fn ping(&self, node: &Node) -> Future<bool>;
+    fn ping(&self, node: &Node) -> sync::Future<bool>;
     /// Find a node with given ID.
-    fn find_node(&self, id: &BigUint) -> Future<Node>;
+    fn find_node(&self, id: &num::BigUint) -> sync::Future<Node>;
 }
-
 
 /// Structure representing a node in system.
 ///
@@ -47,13 +45,13 @@ pub trait GenericRpc : Send + Sync {
 #[unstable]
 pub struct Node {
     /// Network address of the node.
-    pub address: SocketAddr,
+    pub address: ip::SocketAddr,
     /// ID of the node.
-    pub id: BigUint
+    pub id: num::BigUint
 }
 
 
-impl<E, S:Encoder<E>> Encodable<S, E> for Node {
+impl<E, S:serialize::Encoder<E>> serialize::Encodable<S, E> for Node {
     fn encode(&self, s: &mut S) -> Result<(), E> {
         s.emit_struct("Node", 2, |s| {
             try!(s.emit_struct_field("address", 0, |s2| {
@@ -71,7 +69,7 @@ impl<E, S:Encoder<E>> Encodable<S, E> for Node {
     }
 }
 
-impl<E, D:Decoder<E>> Decodable<D, E> for Node {
+impl<E, D:serialize::Decoder<E>> serialize::Decodable<D, E> for Node {
     fn decode(d: &mut D) -> Result<Node, E> {
         d.read_struct("Node", 2, |d| {
             let addr = try!(d.read_struct_field("address", 0, |d2| {
@@ -104,9 +102,12 @@ impl<E, D:Decoder<E>> Decodable<D, E> for Node {
 
 #[cfg(test)]
 mod test {
-    use serialize::{json, Encodable};
+    use serialize::json;
+
     use super::Node;
+
     use super::super::utils::test;
+
 
     #[deriving(Show, Clone, Encodable, Decodable)]
     struct SimplifiedNode {
