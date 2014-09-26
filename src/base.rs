@@ -104,19 +104,9 @@ impl<E, D:Decoder<E>> Decodable<D, E> for Node {
 
 #[cfg(test)]
 mod test {
-    use std::from_str::FromStr;
-    use std::num::FromPrimitive;
     use serialize::{json, Encodable};
     use super::Node;
-
-    static ADDR: &'static str = "127.0.0.1:80";
-
-    fn new_node(id: uint) -> Node {
-        Node {
-            id: FromPrimitive::from_uint(id).unwrap(),
-            address: FromStr::from_str(ADDR).unwrap()
-        }
-    }
+    use super::super::utils::test;
 
     #[deriving(Show, Clone, Encodable, Decodable)]
     struct SimplifiedNode {
@@ -126,10 +116,10 @@ mod test {
 
     #[test]
     fn test_node_encode() {
-        let n = new_node(42);
+        let n = test::new_node(42);
         let j = json::encode(&n);
         let m: SimplifiedNode = json::decode(j.as_slice()).unwrap();
-        assert_eq!(ADDR, m.address.as_slice());
+        assert_eq!(test::ADDR, m.address.as_slice());
         assert_eq!("42", m.id.as_slice());
     }
 
@@ -166,7 +156,7 @@ mod test {
 
     #[test]
     fn test_node_encode_decode() {
-        let n = new_node(42);
+        let n = test::new_node(42);
         let j = json::encode(&n);
         let n2 = json::decode::<Node>(j.as_slice()).unwrap();
         assert_eq!(n.id, n2.id);

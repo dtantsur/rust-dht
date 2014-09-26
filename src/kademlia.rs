@@ -154,27 +154,17 @@ impl KBucket {
 
 #[cfg(test)]
 mod test {
-    use std::from_str::FromStr;
-    use std::num::FromPrimitive;
     use num::BigUint;
     use super::super::GenericNodeTable;
     use super::super::Node;
     use super::HASH_SIZE;
     use super::KBucket;
     use super::NodeTable;
-
-    static ADDR: &'static str = "127.0.0.1:80";
-
-    fn new_node(id: uint) -> Node {
-        Node {
-            id: FromPrimitive::from_uint(id).unwrap(),
-            address: FromStr::from_str(ADDR).unwrap()
-        }
-    }
+    use super::super::utils::test;
 
     fn prepare(count: uint) -> KBucket {
         KBucket {
-            data: Vec::from_fn(count, |i| new_node(i)),
+            data: Vec::from_fn(count, |i| test::new_node(i)),
             size: 3,
         }
     }
@@ -187,14 +177,14 @@ mod test {
 
     #[test]
     fn test_nodetable_new() {
-        let n = NodeTable::new(FromPrimitive::from_uint(42).unwrap());
+        let n = NodeTable::new(test::uint_to_id(42));
         assert_eq!(HASH_SIZE, n.buckets.len());
     }
 
     #[test]
     fn test_nodetable_bucket_number() {
-        let n = NodeTable::new(FromPrimitive::from_uint(42).unwrap());
-        let id = FromPrimitive::from_uint(41).unwrap();
+        let n = NodeTable::new(test::uint_to_id(42));
+        let id = test::uint_to_id(41);
         // 42 xor 41 == 3
         assert_eq!(1, n.bucket_number(&id));
     }
@@ -202,10 +192,10 @@ mod test {
     #[test]
     fn test_nodetable_pop_oldest() {
         let mut n = NodeTable::with_details(
-            FromPrimitive::from_uint(42).unwrap(), 2, HASH_SIZE);
-        n.update(&new_node(41));
-        n.update(&new_node(43));
-        n.update(&new_node(40));
+            test::uint_to_id(42), 2, HASH_SIZE);
+        n.update(&test::new_node(41));
+        n.update(&test::new_node(43));
+        n.update(&test::new_node(40));
         assert_eq!(0, n.buckets[2].data.len());
         assert_eq!(2, n.buckets[1].data.len());
         assert_eq!(1, n.buckets[0].data.len());
@@ -222,10 +212,10 @@ mod test {
     fn test_nodetable_find() {
         let n = NodeTable {
             buckets: vec![prepare(1), prepare(3), prepare(1)],
-            own_id: FromPrimitive::from_uint(0).unwrap()
+            own_id: test::uint_to_id(0)
         };
         // 0 xor 3 = 3, 1 xor 3 = 2, 2 xor 3 = 1
-        let id = FromPrimitive::from_uint(3).unwrap();
+        let id = test::uint_to_id(3);
         assert_node_list_eq([&n.buckets[1].data[2]],
                             &n.find(&id, 1));
     }
@@ -233,8 +223,8 @@ mod test {
     #[test]
     fn test_nodetable_update() {
         let mut n = NodeTable::with_details(
-            FromPrimitive::from_uint(42).unwrap(), 1, HASH_SIZE);
-        let node = new_node(41);
+            test::uint_to_id(42), 1, HASH_SIZE);
+        let node = test::new_node(41);
         n.update(&node);
         assert_eq!(1, n.buckets[1].data.len());
         n.update(&node);
@@ -251,7 +241,7 @@ mod test {
     #[test]
     fn test_kbucket_update_unknown() {
         let mut b = prepare(1);
-        let node = new_node(42);
+        let node = test::new_node(42);
         assert!(b.update(&node))
         assert_eq!(2, b.data.len());
         assert_eq!(node.id, b.data[1].id);
@@ -260,7 +250,7 @@ mod test {
     #[test]
     fn test_kbucket_update_known() {
         let mut b = prepare(2);
-        let node = new_node(0);
+        let node = test::new_node(0);
         assert!(b.update(&node))
         assert_eq!(2, b.data.len());
         assert_eq!(node.id, b.data[1].id);
@@ -269,7 +259,7 @@ mod test {
     #[test]
     fn test_kbucket_update_conflict() {
         let mut b = prepare(3);  // 3 is size
-        let node = new_node(42);
+        let node = test::new_node(42);
         assert!(!b.update(&node))
     }
 
@@ -277,7 +267,7 @@ mod test {
     fn test_kbucket_find() {
         let b = prepare(3);
         // Nodes with ID's 0, 1, 2; assume our ID is also 2 (impossible IRL)
-        let id = FromPrimitive::from_uint(2).unwrap();
+        let id = test::uint_to_id(2);
         // 0 xor 2 = 2, 1 xor 2 = 3, 2 xor 2 = 0
         assert_node_list_eq([&b.data[2]], &b.find(&id, 1));
         assert_node_list_eq([&b.data[2], &b.data[0]], &b.find(&id, 2));

@@ -38,14 +38,13 @@ impl<TNodeTable: GenericNodeTable, TRpc: GenericRpc> Service<TNodeTable, TRpc> {
 
 #[cfg(test)]
 mod test {
-    use std::from_str::FromStr;
-    use std::num::FromPrimitive;
     use std::sync::Future;
     use num::BigUint;
     use super::super::GenericNodeTable;
     use super::super::GenericRpc;
     use super::super::Node;
     use super::Service;
+    use super::super::utils::test;
 
     struct DummyNodeTable {
         last_node: Option<Node>,
@@ -76,16 +75,7 @@ mod test {
         }
         #[allow(unused_variable)]
         fn find_node(&self, id: &BigUint) -> Future<Node> {
-            Future::from_value(new_node(100500))
-        }
-    }
-
-    static ADDR: &'static str = "127.0.0.1:80";
-
-    fn new_node(id: uint) -> Node {
-        Node {
-            id: FromPrimitive::from_uint(id).unwrap(),
-            address: FromStr::from_str(ADDR).unwrap()
+            Future::from_value(test::new_node(100500))
         }
     }
 
@@ -93,7 +83,7 @@ mod test {
     fn test_new() {
         let s = Service::new(DummyNodeTable { last_node: None }, DummyRpc);
         let mut g = s.node_table.write();
-        assert_eq!(0, g.find(&FromPrimitive::from_uint(42).unwrap(), 1).len());
-        assert!(s.rpc.ping(&new_node(42)).get());
+        assert_eq!(0, g.find(&test::uint_to_id(42), 1).len());
+        assert!(s.rpc.ping(&test::new_node(42)).get());
     }
 }
