@@ -5,6 +5,6 @@ language: rust
 script:
     - cargo build --verbose
     - cargo test --verbose
-    - cargo doc --verbose
+    - cargo doc --no-deps --verbose
 after_script:
     - curl http://www.rust-ci.org/artifacts/put?t=$RUSTCI_TOKEN | sh
