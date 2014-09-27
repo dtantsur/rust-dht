@@ -32,9 +32,11 @@ pub trait GenericNodeTable : Send + Sync {
 #[experimental]
 pub trait GenericRpc : Send + Sync {
     /// Ping a node, returning true if node seems reachable.
-    fn ping(&self, node: &Node) -> sync::Future<bool>;
+    fn ping(&mut self, node: &Node) -> sync::Future<bool>;
     /// Find a node with given ID.
-    fn find_node(&self, id: &num::BigUint) -> sync::Future<Node>;
+    fn find_node(&mut self, id: &num::BigUint) -> sync::Future<Node>;
+    /// Create RPC implementation for a given node.
+    fn start_on(own_node: &Node) -> Self;
 }
 
 /// Structure representing a node in system.
