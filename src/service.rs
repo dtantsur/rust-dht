@@ -24,13 +24,24 @@ pub struct Service<TNodeTable:GenericNodeTable, TRpc:GenericRpc> {
 }
 
 
+#[experimental]
 impl<TNodeTable:GenericNodeTable, TRpc:GenericRpc> Service<TNodeTable, TRpc> {
-    #[experimental]
+    /// Create new service with given node table and RPC implementations.
     pub fn new(node_table: TNodeTable, rpc: TRpc) -> Service<TNodeTable, TRpc> {
         Service {
             node_table: sync::Arc::new(sync::RWLock::new(node_table)),
             rpc: sync::Arc::new(rpc),
         }
+    }
+
+    /// Get lock object for a node_table.
+    pub fn node_table(&self) -> &sync::RWLock<TNodeTable> {
+        self.node_table.deref()
+    }
+
+    /// Get instanc of RPC object.
+    pub fn rpc(&self) -> &TRpc {
+        self.rpc.deref()
     }
 }
 
@@ -87,8 +98,8 @@ mod test {
     #[test]
     fn test_new() {
         let s = Service::new(DummyNodeTable { last_node: None }, DummyRpc);
-        let mut g = s.node_table.write();
+        let mut g = s.node_table().write();
         assert_eq!(0, g.find(&test::uint_to_id(42), 1).len());
-        assert!(s.rpc.ping(&test::new_node(42)).get());
+        assert!(s.rpc().ping(&test::new_node(42)).get());
     }
 }
