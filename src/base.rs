@@ -34,7 +34,7 @@ pub trait GenericRpc : Send + Sync {
     /// Ping a node, returning true if node seems reachable.
     fn ping(&self, node: &Node) -> sync::Future<bool>;
     /// Find a node with given ID.
-    fn find_node(&self, id: &num::BigUint) -> sync::Future<Node>;
+    fn find_node(&self, id: &num::BigUint) -> sync::Future<Option<Node>>;
 }
 
 /// Structure representing a node in system.

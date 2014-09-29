@@ -89,8 +89,8 @@ mod test {
             sync::Future::from_value(true)
         }
         #[allow(unused_variable)]
-        fn find_node(&self, id: &num::BigUint) -> sync::Future<Node> {
-            sync::Future::from_value(test::new_node(100500))
+        fn find_node(&self, id: &num::BigUint) -> sync::Future<Option<Node>> {
+            sync::Future::from_value(Some(test::new_node(100500)))
         }
     }
 
