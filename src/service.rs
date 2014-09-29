@@ -13,7 +13,6 @@ use std::sync;
 
 use super::GenericNodeTable;
 use super::GenericRpc;
-use super::Node;
 
 
 // TODO(divius): implement
@@ -21,30 +20,16 @@ use super::Node;
 #[experimental]
 pub struct Service<TNodeTable:GenericNodeTable, TRpc:GenericRpc> {
     node_table: sync::Arc<sync::RWLock<TNodeTable>>,
-    rpc: sync::Arc<sync::RWLock<TRpc>>,
+    rpc: sync::Arc<TRpc>,
 }
 
 
-#[experimental]
 impl<TNodeTable:GenericNodeTable, TRpc:GenericRpc> Service<TNodeTable, TRpc> {
-    pub fn new(own_node: &Node, node_table: TNodeTable) -> Service<TNodeTable, TRpc> {
-        info!("Starting RPC for node {}", own_node);
-        let rpc = GenericRpc::start_on(own_node);
-        Service::new_with_rpc(node_table, rpc)
-    }
-
-    pub fn node_table_lock(&self) -> &sync::RWLock<TNodeTable> {
-        self.node_table.deref()
-    }
-
-    pub fn rpc_lock(&self) -> &sync::RWLock<TRpc> {
-        self.rpc.deref()
-    }
-
-    fn new_with_rpc(node_table: TNodeTable, rpc: TRpc) -> Service<TNodeTable, TRpc> {
+    #[experimental]
+    pub fn new(node_table: TNodeTable, rpc: TRpc) -> Service<TNodeTable, TRpc> {
         Service {
             node_table: sync::Arc::new(sync::RWLock::new(node_table)),
-            rpc: sync::Arc::new(sync::RWLock::new(rpc)),
+            rpc: sync::Arc::new(rpc),
         }
     }
 }
@@ -89,28 +74,21 @@ mod test {
     struct DummyRpc;
     impl GenericRpc for DummyRpc {
         #[allow(unused_variable)]
-        fn ping(&mut self, node: &Node) -> sync::Future<bool> {
+        fn ping(&self, node: &Node) -> sync::Future<bool> {
             sync::Future::from_value(true)
         }
         #[allow(unused_variable)]
-        fn find_node(&mut self, id: &num::BigUint) -> sync::Future<Node> {
+        fn find_node(&self, id: &num::BigUint) -> sync::Future<Node> {
             sync::Future::from_value(test::new_node(100500))
-        }
-        #[allow(unused_variable)]
-        fn start_on(own_node: &Node) -> DummyRpc {
-            DummyRpc
         }
     }
 
 
     #[test]
     fn test_new() {
-        let s: Service<DummyNodeTable, DummyRpc>;
-        s = Service::new(&test::new_node(1),
-                         DummyNodeTable { last_node: None });
-        let mut g = s.node_table_lock().write();
+        let s = Service::new(DummyNodeTable { last_node: None }, DummyRpc);
+        let mut g = s.node_table.write();
         assert_eq!(0, g.find(&test::uint_to_id(42), 1).len());
-        let mut r = s.rpc_lock().write();
-        assert!(r.ping(&test::new_node(42)).get());
+        assert!(s.rpc.ping(&test::new_node(42)).get());
     }
 }
