@@ -11,10 +11,13 @@
 //! [BEP 0005](http://www.bittorrent.org/beps/bep_0005.html).
 
 use std::collections;
+use std::sync;
 
 use bencode::{mod, ToBencode};
 use bencode::util::ByteString;
+use num;
 
+use super::GenericRpc;
 use super::Node;
 
 
@@ -39,6 +42,11 @@ pub struct Package {
     pub payload: Payload,
     /// Sender Node (note that as per BEP 0005 it is stored in payload).
     pub sender: Node
+}
+
+/// KRPC implementation.
+pub struct KRpc {
+    own_node: Node,
 }
 
 
@@ -80,6 +88,22 @@ impl ToBencode for Package {
     }
 }
 
+impl KRpc {
+    /// Create new KRpc.
+    pub fn new(own_node: Node) -> KRpc {
+        KRpc { own_node: own_node }
+    }
+}
+
+impl GenericRpc for KRpc {
+    fn ping(&self, node: &Node) -> sync::Future<bool> {
+        sync::Future::from_value(true)
+    }
+
+    fn find_node(&self, id: &num::BigUint) -> sync::Future<Option<Node>> {
+        sync::Future::from_value(None)
+    }
+}
 
 #[cfg(test)]
 mod test {

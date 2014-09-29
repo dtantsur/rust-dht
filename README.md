@@ -28,3 +28,5 @@ Currently implemented or have a good progress:
 Just started or stubs:
 
 * `Service` struct glueing together RPC and node table.
+
+* `krpc::KRpc`: KRPC implementation.
