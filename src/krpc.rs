@@ -17,8 +17,7 @@ use bencode::{mod, ToBencode};
 use bencode::util::ByteString;
 use num;
 
-use super::GenericRpc;
-use super::Node;
+use super::base;
 
 
 /// Mapping String -> Bytes used in payload.
@@ -41,16 +40,16 @@ pub struct Package {
     /// Package payload.
     pub payload: Payload,
     /// Sender Node (note that as per BEP 0005 it is stored in payload).
-    pub sender: Node
+    pub sender: base::Node
 }
 
 /// KRPC implementation.
 pub struct KRpc {
-    own_node: Node,
+    own_node: base::Node,
 }
 
 
-impl ToBencode for Node {
+impl ToBencode for base::Node {
     fn to_bencode(&self) -> bencode::Bencode {
         // TODO(divius): implement
         bencode::ByteString(vec![])
@@ -90,18 +89,18 @@ impl ToBencode for Package {
 
 impl KRpc {
     /// Create new KRpc.
-    pub fn new(own_node: Node) -> KRpc {
+    pub fn new(own_node: base::Node) -> KRpc {
         KRpc { own_node: own_node }
     }
 }
 
-impl GenericRpc for KRpc {
-    fn ping(&self, node: &Node) -> sync::Future<bool> {
+impl base::GenericRpc for KRpc {
+    fn ping(&self, node: &base::Node) -> sync::Future<bool> {
         sync::Future::from_value(true)
     }
 
-    fn find_node(&self, id: &num::BigUint) -> sync::Future<Option<Node>> {
-        sync::Future::from_value(None)
+    fn find_node(&self, id: &num::BigUint) -> sync::Future<base::LookupResult> {
+        sync::Future::from_value(base::NothingFound)
     }
 }
 

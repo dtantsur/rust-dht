@@ -28,13 +28,28 @@ pub trait GenericNodeTable : Send + Sync {
     fn pop_oldest(&mut self) -> Vec<Node>;
 }
 
+/// Result of node lookup.
+#[unstable]
+pub enum LookupResult {
+    /// Found exact match.
+    NodeFound(Node),
+    /// Found N closest nodes, exact node was not found.
+    ClosestNodesFound(Vec<Node>),
+    /// Nothing found at all.
+    NothingFound
+}
+
 /// Trait representing RPC implementation.
+///
+/// Note that it does not implement DHT logic, just RPC calls.
 #[experimental]
 pub trait GenericRpc : Send + Sync {
     /// Ping a node, returning true if node seems reachable.
     fn ping(&self, node: &Node) -> sync::Future<bool>;
     /// Find a node with given ID.
-    fn find_node(&self, id: &num::BigUint) -> sync::Future<Option<Node>>;
+    ///
+    /// May return requested nodes or a list of closest nodes to requested.
+    fn find_node(&self, id: &num::BigUint) -> sync::Future<LookupResult>;
 }
 
 /// Structure representing a node in system.

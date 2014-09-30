@@ -52,9 +52,7 @@ mod test {
 
     use num;
 
-    use super::super::GenericNodeTable;
-    use super::super::GenericRpc;
-    use super::super::Node;
+    use super::super::base::{mod, GenericNodeTable, GenericRpc};
 
     use super::Service;
 
@@ -62,22 +60,22 @@ mod test {
 
 
     struct DummyNodeTable {
-        last_node: Option<Node>,
+        last_node: Option<base::Node>,
     }
 
     impl GenericNodeTable for DummyNodeTable {
-        fn update(&mut self, node: &Node) -> bool {
+        fn update(&mut self, node: &base::Node) -> bool {
             self.last_node = Some(node.clone());
             true
         }
         #[allow(unused_variable)]
-        fn find(&self, id: &num::BigUint, count: uint) -> Vec<Node> {
+        fn find(&self, id: &num::BigUint, count: uint) -> Vec<base::Node> {
             match self.last_node {
                 Some(ref n) if n.id == *id => vec![n.clone()],
                 _ => vec![]
             }
         }
-        fn pop_oldest(&mut self) -> Vec<Node> {
+        fn pop_oldest(&mut self) -> Vec<base::Node> {
             vec![]
         }
     }
@@ -85,12 +83,12 @@ mod test {
     struct DummyRpc;
     impl GenericRpc for DummyRpc {
         #[allow(unused_variable)]
-        fn ping(&self, node: &Node) -> sync::Future<bool> {
+        fn ping(&self, node: &base::Node) -> sync::Future<bool> {
             sync::Future::from_value(true)
         }
         #[allow(unused_variable)]
-        fn find_node(&self, id: &num::BigUint) -> sync::Future<Option<Node>> {
-            sync::Future::from_value(Some(test::new_node(100500)))
+        fn find_node(&self, id: &num::BigUint) -> sync::Future<base::LookupResult> {
+            sync::Future::from_value(base::NodeFound(test::new_node(100500)))
         }
     }
 
