@@ -20,6 +20,8 @@ use serialize;
 /// Keeps some reasonable subset of known nodes passed to `update`.
 #[unstable]
 pub trait GenericNodeTable : Send + Sync {
+    /// Generate suitable random ID.
+    fn random_id(&self) -> num::BigUint;
     /// Store or update node in the table.
     fn update(&mut self, node: &Node) -> bool;
     /// Find given number of node, closest to given ID.

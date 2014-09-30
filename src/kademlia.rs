@@ -15,8 +15,10 @@
 //! using `pop_oldest` call.
 
 use std::num::Zero;
+use std::rand;
 
 use num;
+use num::bigint::RandBigInt;
 
 use super::GenericNodeTable;
 use super::Node;
@@ -35,6 +37,7 @@ static HASH_SIZE: uint = 160;
 #[unstable]
 pub struct NodeTable {
     this_id: num::BigUint,
+    hash_size: uint,
     // TODO(divius): convert to more appropriate data structure
     buckets: Vec<KBucket>,
 }
@@ -42,7 +45,7 @@ pub struct NodeTable {
 /// K-bucket - structure for keeping last nodes in Kademlia.
 struct KBucket {
     data: Vec<Node>,
-    size: uint
+    size: uint,
 }
 
 
@@ -60,6 +63,7 @@ impl NodeTable {
                     hash_size: uint) -> NodeTable {
         NodeTable {
             this_id: this_id,
+            hash_size: hash_size,
             buckets: Vec::from_fn(hash_size,
                                   |_| KBucket::new(bucket_size)),
         }
@@ -82,6 +86,11 @@ impl NodeTable {
 
 #[unstable]
 impl GenericNodeTable for NodeTable {
+    fn random_id(&self) -> num::BigUint {
+        let mut rng = rand::task_rng();
+        rng.gen_biguint(self.hash_size)
+    }
+
     fn update(&mut self, node: &Node) -> bool {
         assert!(node.id != self.this_id);
         let bucket = self.bucket_number(&node.id);
@@ -218,7 +227,8 @@ mod test {
     fn test_nodetable_find() {
         let n = NodeTable {
             buckets: vec![prepare(1), prepare(3), prepare(1)],
-            this_id: test::uint_to_id(0)
+            this_id: test::uint_to_id(0),
+            hash_size: HASH_SIZE,
         };
         // 0 xor 3 = 3, 1 xor 3 = 2, 2 xor 3 = 1
         let id = test::uint_to_id(3);
@@ -235,6 +245,16 @@ mod test {
         assert_eq!(1, n.buckets[1].data.len());
         n.update(&node);
         assert_eq!(1, n.buckets[1].data.len());
+    }
+
+    #[test]
+    fn test_nodetable_random_id() {
+        let n = NodeTable::with_details(
+            test::uint_to_id(42), 1, HASH_SIZE);
+        for _ in range(0u, 100u) {
+            assert!(n.random_id().bits() <= HASH_SIZE);
+        }
+        assert!(n.random_id() != n.random_id());
     }
 
     #[test]

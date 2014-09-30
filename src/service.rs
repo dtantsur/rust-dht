@@ -64,6 +64,11 @@ mod test {
     }
 
     impl GenericNodeTable for DummyNodeTable {
+        fn random_id(&self) -> num::BigUint {
+            // This number is random, I promise :)
+            test::uint_to_id(42)
+        }
+
         fn update(&mut self, node: &base::Node) -> bool {
             self.last_node = Some(node.clone());
             true
