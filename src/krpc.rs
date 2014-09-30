@@ -45,7 +45,7 @@ pub struct Package {
 
 /// KRPC implementation.
 pub struct KRpc {
-    own_node: base::Node,
+    this_node: base::Node,
 }
 
 
@@ -89,8 +89,8 @@ impl ToBencode for Package {
 
 impl KRpc {
     /// Create new KRpc.
-    pub fn new(own_node: base::Node) -> KRpc {
-        KRpc { own_node: own_node }
+    pub fn new(this_node: base::Node) -> KRpc {
+        KRpc { this_node: this_node }
     }
 }
 

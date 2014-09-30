@@ -7,7 +7,7 @@
 // except according to those terms.
 //
 
-//! DHT implementation based on Kademlia.
+//! DHT node table implementation based on Kademlia.
 //!
 //! See [original paper](http://pdos.csail.mit.edu/%7Epetar/papers/maymounkov-kademlia-lncs.pdf)
 //! for details. The most essential difference is that when k-bucket is full,
@@ -34,7 +34,7 @@ static HASH_SIZE: uint = 160;
 /// from 2^N to 2^(N+1) from our node.
 #[unstable]
 pub struct NodeTable {
-    own_id: num::BigUint,
+    this_id: num::BigUint,
     // TODO(divius): convert to more appropriate data structure
     buckets: Vec<KBucket>,
 }
@@ -50,16 +50,16 @@ struct KBucket {
 impl NodeTable {
     /// Create a new node table.
     ///
-    /// `own_id` -- ID of the current node (used to calculate metrics).
-    pub fn new(own_id: num::BigUint) -> NodeTable {
-        NodeTable::with_details(own_id, BUCKET_SIZE, HASH_SIZE)
+    /// `this_id` -- ID of the current node (used to calculate metrics).
+    pub fn new(this_id: num::BigUint) -> NodeTable {
+        NodeTable::with_details(this_id, BUCKET_SIZE, HASH_SIZE)
     }
 
-    // TODO(divius): make public
-    fn with_details(own_id: num::BigUint, bucket_size: uint,
+    // TODO(divius): make public?
+    fn with_details(this_id: num::BigUint, bucket_size: uint,
                     hash_size: uint) -> NodeTable {
         NodeTable {
-            own_id: own_id,
+            this_id: this_id,
             buckets: Vec::from_fn(hash_size,
                                   |_| KBucket::new(bucket_size)),
         }
@@ -71,11 +71,11 @@ impl NodeTable {
     }
 
     fn bucket_number(&self, id: &num::BigUint) -> uint {
-        let diff = NodeTable::distance(&self.own_id, id);
+        let diff = NodeTable::distance(&self.this_id, id);
         debug_assert!(!diff.is_zero());
         let res = diff.bits() - 1;
         debug!("ID {} relative to own ID {} falls into bucket {}",
-               id, self.own_id, res);
+               id, self.this_id, res);
         res
     }
 }
@@ -83,14 +83,14 @@ impl NodeTable {
 #[unstable]
 impl GenericNodeTable for NodeTable {
     fn update(&mut self, node: &Node) -> bool {
-        assert!(node.id != self.own_id);
+        assert!(node.id != self.this_id);
         let bucket = self.bucket_number(&node.id);
         self.buckets.get_mut(bucket).update(node)
     }
 
     fn find(&self, id: &num::BigUint, count: uint) -> Vec<Node> {
         debug_assert!(count > 0);
-        assert!(*id != self.own_id)
+        assert!(*id != self.this_id)
         let bucket = self.bucket_number(id);
         self.buckets[bucket].find(id, count)
     }
@@ -116,7 +116,7 @@ impl KBucket {
 
     pub fn update(&mut self, node: &Node) -> bool {
         if self.data.iter().any(|x| x.id == node.id) {
-            self.update_position(node);
+            self.update_position(node.clone());
             debug!("Promoted node {} to the top of kbucket", node);
             true
         }
@@ -140,7 +140,7 @@ impl KBucket {
         data_copy.slice(0, count).to_vec()
     }
 
-    fn update_position(&mut self, node: &Node) {
+    fn update_position(&mut self, node: Node) {
         // TODO(divius): 1. optimize, 2. make it less ugly
         let mut new_data = Vec::with_capacity(self.data.len());
         new_data.extend(self.data.iter()
@@ -218,7 +218,7 @@ mod test {
     fn test_nodetable_find() {
         let n = NodeTable {
             buckets: vec![prepare(1), prepare(3), prepare(1)],
-            own_id: test::uint_to_id(0)
+            this_id: test::uint_to_id(0)
         };
         // 0 xor 3 = 3, 1 xor 3 = 2, 2 xor 3 = 1
         let id = test::uint_to_id(3);
