@@ -1,3 +1,19 @@
+//! Various utilities
+
+use std::io::net::ip;
+
+
+/// Convert socket address to bytes in network order.
+pub fn netaddr_to_netbytes(addr: &ip::SocketAddr) -> Vec<u8> {
+    match addr.ip {
+        ip::Ipv4Addr(a, b, c, d) =>
+            vec![a, b, c, d, (addr.port >> 8) as u8, (addr.port & 0xFF) as u8],
+        // TODO(divius): implement
+        ip::Ipv6Addr(..) => fail!("IPv6 not implemented")
+    }
+}
+
+
 #[cfg(test)]
 pub mod test {
     use std::from_str::FromStr;

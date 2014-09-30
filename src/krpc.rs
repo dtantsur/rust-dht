@@ -18,7 +18,11 @@ use bencode::util::ByteString;
 use num;
 
 use super::base;
+use super::utils;
 
+
+// TODO(divius): actually validate it
+static ID_BYTE_SIZE: uint = 20;
 
 /// Mapping String -> Bytes used in payload.
 pub type PayloadDict = collections::TreeMap<String, Vec<u8>>;
@@ -48,11 +52,27 @@ pub struct KRpc {
     this_node: base::Node,
 }
 
+fn id_to_netbytes(id: &num::BigUint) -> Vec<u8> {
+    assert!(id.bits() <= ID_BYTE_SIZE * 8);
+
+    let mut id_c = id.clone();
+    let mask = FromPrimitive::from_u8(0xFF).unwrap();
+    let mut result = Vec::from_elem(ID_BYTE_SIZE, 0);
+
+    for i in result.iter_mut().rev() {
+        let part = id_c & mask;
+        *i = part.to_u8().unwrap();
+        id_c = id_c >> 8;
+    }
+
+    result
+}
 
 impl ToBencode for base::Node {
     fn to_bencode(&self) -> bencode::Bencode {
-        // TODO(divius): implement
-        bencode::ByteString(vec![])
+        let mut result = id_to_netbytes(&self.id);
+        result.push_all(utils::netaddr_to_netbytes(&self.address).as_slice());
+        bencode::ByteString(result)
     }
 }
 
@@ -199,5 +219,23 @@ mod test {
         let enc = p.to_bencode();
         dict(&enc, "r");
         // TODO(divius): Moar tests
+    }
+
+    #[test]
+    fn test_id_to_netbytes() {
+        let id = test::uint_to_id(0x0A0B0C0D);
+        let b = super::id_to_netbytes(&id);
+        let mut expected = Vec::from_elem(16, 0u8);
+        expected.push_all([0x0A, 0x0b, 0x0C, 0x0D]);
+        assert_eq!(expected, b);
+    }
+
+    #[test]
+    fn test_node_to_bencode() {
+        let n = test::new_node(42);
+        let enc = n.to_bencode();
+        let mut expected = Vec::from_elem(19, 0u8);
+        expected.push_all([42, 127, 0, 0, 1, 0, 80]);
+        assert_eq!(bencode::ByteString(expected), enc);
     }
 }
