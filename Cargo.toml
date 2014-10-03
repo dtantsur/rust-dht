@@ -10,7 +10,8 @@ git = "https://github.com/rust-lang/num"
 
 [dependencies.bencode]
 
-git = "https://github.com/arjantop/rust-bencode"
+git = "https://github.com/Divius/rust-bencode"
+branch = "fix-build"
 
 [lib]
 
