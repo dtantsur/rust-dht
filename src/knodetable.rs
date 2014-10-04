@@ -14,6 +14,7 @@
 //! no RPC call is done. It is up to upper-level code to ensure proper clean up
 //! using `pop_oldest` call.
 
+use std::cmp;
 use std::num::Zero;
 use std::rand;
 
@@ -147,7 +148,7 @@ impl KBucket {
         };
         let mut data_copy = self.data.clone();
         data_copy.sort_by(sort_fn);
-        data_copy.slice(0, count).to_vec()
+        data_copy.slice(0, cmp::min(count, data_copy.len())).to_vec()
     }
 
     fn update_position(&mut self, node: Node) {
@@ -298,5 +299,15 @@ mod test {
         // 0 xor 2 = 2, 1 xor 2 = 3, 2 xor 2 = 0
         assert_node_list_eq([&b.data[2]], &b.find(&id, 1));
         assert_node_list_eq([&b.data[2], &b.data[0]], &b.find(&id, 2));
+    }
+
+    #[test]
+    fn test_kbucket_find_too_much() {
+        let b = prepare(3);
+        // Nodes with ID's 0, 1, 2; assume our ID is also 2 (impossible IRL)
+        let id = test::uint_to_id(2);
+        // 0 xor 2 = 2, 1 xor 2 = 3, 2 xor 2 = 0
+        assert_node_list_eq([&b.data[2], &b.data[0], &b.data[1]],
+                            &b.find(&id, 100));
     }
 }
