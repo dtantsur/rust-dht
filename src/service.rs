@@ -101,7 +101,7 @@ mod test {
     #[test]
     fn test_new() {
         let s = Service::new(DummyNodeTable { last_node: None }, DummyRpc);
-        let mut g = s.node_table().write();
+        let g = s.node_table().write();
         assert_eq!(0, g.find(&test::uint_to_id(42), 1).len());
         assert!(s.rpc().ping(&test::new_node(42)).get());
     }
