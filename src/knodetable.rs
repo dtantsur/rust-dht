@@ -35,7 +35,7 @@ static HASH_SIZE: uint = 160;
 /// usually 160), where N-th k-bucket contains nodes with distance
 /// from 2^N to 2^(N+1) from our node.
 #[unstable]
-pub struct NodeTable {
+pub struct KNodeTable {
     this_id: num::BigUint,
     hash_size: uint,
     // TODO(divius): convert to more appropriate data structure
@@ -50,18 +50,18 @@ struct KBucket {
 
 
 #[unstable]
-impl NodeTable {
+impl KNodeTable {
     /// Create a new node table.
     ///
     /// `this_id` -- ID of the current node (used to calculate metrics).
-    pub fn new(this_id: num::BigUint) -> NodeTable {
-        NodeTable::with_details(this_id, BUCKET_SIZE, HASH_SIZE)
+    pub fn new(this_id: num::BigUint) -> KNodeTable {
+        KNodeTable::with_details(this_id, BUCKET_SIZE, HASH_SIZE)
     }
 
     // TODO(divius): make public?
     fn with_details(this_id: num::BigUint, bucket_size: uint,
-                    hash_size: uint) -> NodeTable {
-        NodeTable {
+                    hash_size: uint) -> KNodeTable {
+        KNodeTable {
             this_id: this_id,
             hash_size: hash_size,
             buckets: Vec::from_fn(hash_size,
@@ -75,7 +75,7 @@ impl NodeTable {
     }
 
     fn bucket_number(&self, id: &num::BigUint) -> uint {
-        let diff = NodeTable::distance(&self.this_id, id);
+        let diff = KNodeTable::distance(&self.this_id, id);
         debug_assert!(!diff.is_zero());
         let res = diff.bits() - 1;
         debug!("ID {} relative to own ID {} falls into bucket {}",
@@ -85,7 +85,7 @@ impl NodeTable {
 }
 
 #[unstable]
-impl GenericNodeTable for NodeTable {
+impl GenericNodeTable for KNodeTable {
     fn random_id(&self) -> num::BigUint {
         let mut rng = rand::task_rng();
         rng.gen_biguint(self.hash_size)
@@ -142,7 +142,8 @@ impl KBucket {
 
     pub fn find(&self, id: &num::BigUint, count: uint) -> Vec<Node> {
         let sort_fn = |a: &Node, b: &Node| {
-            NodeTable::distance(id, &a.id).cmp(&NodeTable::distance(id, &b.id))
+            KNodeTable::distance(id, &a.id)
+                .cmp(&KNodeTable::distance(id, &b.id))
         };
         let mut data_copy = self.data.clone();
         data_copy.sort_by(sort_fn);
@@ -170,7 +171,7 @@ mod test {
 
     use super::HASH_SIZE;
     use super::KBucket;
-    use super::NodeTable;
+    use super::KNodeTable;
 
     use super::super::utils::test;
 
@@ -192,13 +193,13 @@ mod test {
 
     #[test]
     fn test_nodetable_new() {
-        let n = NodeTable::new(test::uint_to_id(42));
+        let n = KNodeTable::new(test::uint_to_id(42));
         assert_eq!(HASH_SIZE, n.buckets.len());
     }
 
     #[test]
     fn test_nodetable_bucket_number() {
-        let n = NodeTable::new(test::uint_to_id(42));
+        let n = KNodeTable::new(test::uint_to_id(42));
         let id = test::uint_to_id(41);
         // 42 xor 41 == 3
         assert_eq!(1, n.bucket_number(&id));
@@ -206,7 +207,7 @@ mod test {
 
     #[test]
     fn test_nodetable_pop_oldest() {
-        let mut n = NodeTable::with_details(
+        let mut n = KNodeTable::with_details(
             test::uint_to_id(42), 2, HASH_SIZE);
         n.update(&test::new_node(41));
         n.update(&test::new_node(43));
@@ -225,7 +226,7 @@ mod test {
 
     #[test]
     fn test_nodetable_find() {
-        let n = NodeTable {
+        let n = KNodeTable {
             buckets: vec![prepare(1), prepare(3), prepare(1)],
             this_id: test::uint_to_id(0),
             hash_size: HASH_SIZE,
@@ -238,7 +239,7 @@ mod test {
 
     #[test]
     fn test_nodetable_update() {
-        let mut n = NodeTable::with_details(
+        let mut n = KNodeTable::with_details(
             test::uint_to_id(42), 1, HASH_SIZE);
         let node = test::new_node(41);
         n.update(&node);
@@ -249,7 +250,7 @@ mod test {
 
     #[test]
     fn test_nodetable_random_id() {
-        let n = NodeTable::with_details(
+        let n = KNodeTable::with_details(
             test::uint_to_id(42), 1, HASH_SIZE);
         for _ in range(0u, 100u) {
             assert!(n.random_id().bits() <= HASH_SIZE);

@@ -21,12 +21,9 @@ Currently implemented or have a good progress:
 
 * `Node` struct: endpoint address + ID, representing this Node in the system.
 
-* `kademlia::KBucket`: k-bucket implementation, without replacing of nodes.
-   Goal is to have periodic task taking away all last elements, pinging them
-   and inserting back, if they're alive. Thus will avoid too much of
-   interdependency between node table and RPC.
+* `knodetable::KBucket`: k-bucket implementation.
 
-* `kademlia::NodeTable`: node table with k-buckets.
+* `knodetable::KNodeTable`: node table with k-buckets.
 
 * `krpc::Package`: network package format for KRPC (BitTorrent DHT RPC).
 
