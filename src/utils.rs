@@ -13,6 +13,15 @@ pub fn netaddr_to_netbytes(addr: &ip::SocketAddr) -> Vec<u8> {
     }
 }
 
+/// Get socket address from netbytes.
+pub fn netaddr_from_netbytes(bytes: &[u8]) -> ip::SocketAddr {
+    assert_eq!(6, bytes.len());
+    ip::SocketAddr {
+        ip: ip::Ipv4Addr(bytes[0], bytes[1], bytes[2], bytes[3]),
+        port: (bytes[4] as u16 << 8) + bytes[5] as u16
+    }
+}
+
 
 #[cfg(test)]
 pub mod test {

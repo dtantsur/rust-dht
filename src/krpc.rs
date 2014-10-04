@@ -13,7 +13,7 @@
 use std::collections;
 use std::sync;
 
-use bencode::{mod, ToBencode};
+use bencode::{mod, FromBencode, ToBencode};
 use bencode::util::ByteString;
 use num;
 
@@ -68,11 +68,34 @@ fn id_to_netbytes(id: &num::BigUint) -> Vec<u8> {
     result
 }
 
+fn id_from_netbytes(bytes: &[u8]) -> num::BigUint {
+    let mut result: num::BigUint = FromPrimitive::from_int(0).unwrap();
+    let mut shift = 0;
+    for i in bytes.iter().rev() {
+        let val: num::BigUint = FromPrimitive::from_u8(*i).unwrap();
+        result = result + (val << shift);
+        shift += 8;
+    }
+    result
+}
+
 impl ToBencode for base::Node {
     fn to_bencode(&self) -> bencode::Bencode {
         let mut result = id_to_netbytes(&self.id);
         result.push_all(utils::netaddr_to_netbytes(&self.address).as_slice());
         bencode::ByteString(result)
+    }
+}
+
+impl FromBencode for base::Node {
+    fn from_bencode(b: &bencode::Bencode) -> Option<base::Node> {
+        match *b {
+            bencode::ByteString(ref v) if v.len() == 26 => Some(base::Node {
+                id: id_from_netbytes(v.slice(0, 20)),
+                address: utils::netaddr_from_netbytes(v.slice(20, 26))
+            }),
+            _ => None
+        }
     }
 }
 
@@ -128,7 +151,9 @@ impl base::GenericRpc for KRpc {
 mod test {
     use std::collections;
 
-    use bencode::{mod, ToBencode};
+    use bencode::{mod, FromBencode, ToBencode};
+
+    use super::super::base;
 
     use super::PayloadDict;
     use super::Error;
@@ -231,11 +256,46 @@ mod test {
     }
 
     #[test]
+    fn test_id_from_netbytes() {
+        let mut bytes = Vec::from_elem(16, 0u8);
+        bytes.push_all([0x0A, 0x0b, 0x0C, 0x0D]);
+        let expected = test::uint_to_id(0x0A0B0C0D);
+        let id = super::id_from_netbytes(bytes.as_slice());
+        assert_eq!(expected, id);
+    }
+
+    #[test]
     fn test_node_to_bencode() {
         let n = test::new_node(42);
         let enc = n.to_bencode();
         let mut expected = Vec::from_elem(19, 0u8);
         expected.push_all([42, 127, 0, 0, 1, 0, 80]);
         assert_eq!(bencode::ByteString(expected), enc);
+    }
+
+    #[test]
+    fn test_node_from_bencode() {
+        let mut b = Vec::from_elem(19, 0u8);
+        b.push_all([42, 127, 0, 0, 1, 0, 80]);
+        let n: base::Node =
+            FromBencode::from_bencode(&bencode::ByteString(b)).unwrap();
+        assert_eq!(n.id, test::uint_to_id(42));
+        assert_eq!(n.address.to_string().as_slice(), "127.0.0.1:80");
+    }
+
+    #[test]
+    fn test_node_from_bencode_none() {
+        let n: Option<base::Node> =
+            FromBencode::from_bencode(&bencode::Number(42));
+        assert!(n.is_none());
+    }
+
+    #[test]
+    fn test_node_to_from_bencode() {
+        let n = test::new_node(42);
+        let enc = n.to_bencode();
+        let n2: base::Node = FromBencode::from_bencode(&enc).unwrap();
+        assert_eq!(n.id, n2.id);
+        assert_eq!(n.address, n2.address);
     }
 }
