@@ -11,8 +11,8 @@
 
 use std::sync;
 
-use super::GenericNodeTable;
-use super::GenericRpc;
+use super::base::{mod, GenericNodeTable, GenericRpc};
+use super::knodetable;
 
 
 // TODO(divius): implement
@@ -25,9 +25,19 @@ pub struct Service<TNodeTable:GenericNodeTable, TRpc:GenericRpc> {
 
 
 #[experimental]
+impl<TRpc:GenericRpc> Service<knodetable::KNodeTable, TRpc> {
+    /// Create new service with given RPC implementation.
+    pub fn new(this_node: &base::Node, rpc: TRpc) -> Service<knodetable::KNodeTable, TRpc> {
+        Service::with_node_table(
+            knodetable::KNodeTable::new(this_node.id.clone()), rpc)
+    }
+}
+
+#[experimental]
 impl<TNodeTable:GenericNodeTable, TRpc:GenericRpc> Service<TNodeTable, TRpc> {
     /// Create new service with given node table and RPC implementations.
-    pub fn new(node_table: TNodeTable, rpc: TRpc) -> Service<TNodeTable, TRpc> {
+    pub fn with_node_table(node_table: TNodeTable, rpc: TRpc)
+            -> Service<TNodeTable, TRpc> {
         Service {
             node_table: sync::Arc::new(sync::RWLock::new(node_table)),
             rpc: sync::Arc::new(rpc),
@@ -100,7 +110,16 @@ mod test {
 
     #[test]
     fn test_new() {
-        let s = Service::new(DummyNodeTable { last_node: None }, DummyRpc);
+        let s = Service::new(&test::new_node(1), DummyRpc);
+        let g = s.node_table().write();
+        assert_eq!(0, g.find(&test::uint_to_id(42), 1).len());
+        assert!(s.rpc().ping(&test::new_node(42)).get());
+    }
+
+    #[test]
+    fn test_with_node_table() {
+        let s = Service::with_node_table(DummyNodeTable { last_node: None },
+                                         DummyRpc);
         let g = s.node_table().write();
         assert_eq!(0, g.find(&test::uint_to_id(42), 1).len());
         assert!(s.rpc().ping(&test::new_node(42)).get());
