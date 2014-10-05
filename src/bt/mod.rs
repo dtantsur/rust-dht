@@ -9,5 +9,9 @@
 
 //! BitTorrent DHT implementation.
 
+pub use self::krpc::KRpcService;
+
+#[experimental]
+mod krpc;
 #[experimental]
 mod protocol;

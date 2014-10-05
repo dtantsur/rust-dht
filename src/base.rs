@@ -21,6 +21,7 @@ use serialize;
 #[unstable]
 pub trait GenericNodeTable : Send + Sync {
     /// Generate suitable random ID.
+    #[experimental]
     fn random_id(&self) -> num::BigUint;
     /// Store or update node in the table.
     fn update(&mut self, node: &Node) -> bool;
@@ -30,28 +31,15 @@ pub trait GenericNodeTable : Send + Sync {
     fn pop_oldest(&mut self) -> Vec<Node>;
 }
 
-/// Result of node lookup.
-#[unstable]
-pub enum LookupResult {
-    /// Found exact match.
-    NodeFound(Node),
-    /// Found N closest nodes, exact node was not found.
-    ClosestNodesFound(Vec<Node>),
-    /// Nothing found at all.
-    NothingFound
-}
-
-/// Trait representing RPC implementation.
+/// Trait representing DHT implementation.
 ///
-/// Note that it does not implement DHT logic, just RPC calls.
+/// This is a minimal set of functions expected on any DHT.
 #[experimental]
-pub trait GenericRpc : Send + Sync {
+pub trait GenericService : Send + Sync {
     /// Ping a node, returning true if node seems reachable.
     fn ping(&self, node: &Node) -> sync::Future<bool>;
     /// Find a node with given ID.
-    ///
-    /// May return requested nodes or a list of closest nodes to requested.
-    fn find_node(&self, id: &num::BigUint) -> sync::Future<LookupResult>;
+    fn find_node(&self, id: &num::BigUint) -> sync::Future<Option<Node>>;
 }
 
 /// Structure representing a node in system.

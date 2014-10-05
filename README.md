@@ -29,4 +29,4 @@ Currently implemented or have a good progress:
 
 Just started or stubs:
 
-* `Service` struct glueing together RPC and node table.
+* `bt::KRpcService`: service for basic KRPC DHT.

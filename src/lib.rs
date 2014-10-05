@@ -10,14 +10,11 @@
 //! Distributed Hash Table.
 //!
 //! The goal of this project is to provide flexible implementation of DHT
-//! for different kind of Rust applications. There will be 3 loosely coupled
-//! parts:
+//! for different kind of Rust applications. There will be loosely coupled parts:
 //!
 //! 1. DHT neighborhood table implementation, will be represented by
 //!    `GenericNodeTable` trait and `knodetable::KNodeTable` implementation.
-//! 2. RPC implementation, will be represented by `GenericRpc` trait.
-//! 3. Generic struct `Service<TNodeTable: GenericNodeTable, TRpc: GenericRpc>`
-//!    that will connect previous two.
+//! 2. Particular implementations, first one is `bt::KRpcService`.
 
 #![crate_name = "dht"]
 #![crate_type = "lib"]
@@ -34,9 +31,7 @@ extern crate sync;
 extern crate log;
 
 pub use base::GenericNodeTable;
-pub use base::GenericRpc;
 pub use base::Node;
-pub use service::Service;
 
 #[unstable]
 pub mod base;
@@ -44,7 +39,5 @@ pub mod base;
 pub mod bt;
 #[unstable]
 pub mod knodetable;
-#[experimental]
-pub mod service;
 
 mod utils;
