@@ -25,7 +25,7 @@ pub fn netaddr_from_netbytes(bytes: &[u8]) -> ip::SocketAddr {
 
 #[cfg(test)]
 pub mod test {
-    use std::from_str::FromStr;
+    use std::io::net::ip;
     use std::num::FromPrimitive;
 
     use num;
@@ -36,9 +36,16 @@ pub mod test {
     pub static ADDR: &'static str = "127.0.0.1:8008";
 
     pub fn new_node(id: uint) -> Node {
+        new_node_with_port(id, 8008)
+    }
+
+    pub fn new_node_with_port(id: uint, port: u16) -> Node {
         Node {
             id: FromPrimitive::from_uint(id).unwrap(),
-            address: FromStr::from_str(ADDR).unwrap()
+            address: ip::SocketAddr {
+                ip: ip::Ipv4Addr(127, 0, 0, 1),
+                port: port
+            }
         }
     }
 

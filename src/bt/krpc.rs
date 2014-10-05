@@ -105,7 +105,7 @@ mod test {
 
     #[test]
     fn test_new() {
-        let n = test::new_node(42);
+        let n = test::new_node_with_port(42, 8007);
         let s = KRpcService::new(n.clone(),
                                  DummyNodeTable { last_node: None });
         assert_eq!(n.id, s.this_node.id);
@@ -117,7 +117,7 @@ mod test {
 
     #[test]
     fn test_new_default() {
-        let n = test::new_node(42);
+        let n = test::new_node_with_port(42, 8009);
         let s = KRpcService::new_default(n.clone());
         assert_eq!(n.id, s.this_node.id);
         let nt = s.node_table_lock().read();
