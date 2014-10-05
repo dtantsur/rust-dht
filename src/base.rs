@@ -9,7 +9,6 @@
 
 use std::from_str::FromStr;
 use std::io::net::ip;
-use std::sync;
 
 use num;
 use serialize;
@@ -29,17 +28,6 @@ pub trait GenericNodeTable : Send + Sync {
     fn find(&self, id: &num::BigUint, count: uint) -> Vec<Node>;
     /// Pop expired or the oldest nodes from table for inspection.
     fn pop_oldest(&mut self) -> Vec<Node>;
-}
-
-/// Trait representing DHT implementation.
-///
-/// This is a minimal set of functions expected on any DHT.
-#[experimental]
-pub trait GenericService : Send + Sync {
-    /// Ping a node, returning true if node seems reachable.
-    fn ping(&self, node: &Node) -> sync::Future<bool>;
-    /// Find a node with given ID.
-    fn find_node(&self, id: &num::BigUint) -> sync::Future<Option<Node>>;
 }
 
 /// Structure representing a node in system.
