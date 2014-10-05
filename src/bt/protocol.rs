@@ -7,18 +7,17 @@
 // except according to those terms.
 //
 
-//! KRPC implementation as described in
+//! KRPC protocol bits as described in
 //! [BEP 0005](http://www.bittorrent.org/beps/bep_0005.html).
 
 use std::collections;
-use std::sync;
 
 use bencode::{mod, FromBencode, ToBencode};
 use bencode::util::ByteString;
 use num;
 
-use super::base;
-use super::utils;
+use super::super::base;
+use super::super::utils;
 
 
 // TODO(divius): actually validate it
@@ -47,10 +46,6 @@ pub struct Package {
     pub sender: base::Node
 }
 
-/// KRPC implementation.
-pub struct KRpc {
-    this_node: base::Node,
-}
 
 fn id_to_netbytes(id: &num::BigUint) -> Vec<u8> {
     assert!(id.bits() <= ID_BYTE_SIZE * 8);
@@ -130,22 +125,6 @@ impl ToBencode for Package {
     }
 }
 
-impl KRpc {
-    /// Create new KRpc.
-    pub fn new(this_node: base::Node) -> KRpc {
-        KRpc { this_node: this_node }
-    }
-}
-
-impl base::GenericRpc for KRpc {
-    fn ping(&self, node: &base::Node) -> sync::Future<bool> {
-        sync::Future::from_value(true)
-    }
-
-    fn find_node(&self, id: &num::BigUint) -> sync::Future<base::LookupResult> {
-        sync::Future::from_value(base::NothingFound)
-    }
-}
 
 #[cfg(test)]
 mod test {
@@ -153,7 +132,8 @@ mod test {
 
     use bencode::{mod, FromBencode, ToBencode};
 
-    use super::super::base;
+    use super::super::super::base;
+    use super::super::super::utils::test;
 
     use super::PayloadDict;
     use super::Error;
@@ -161,8 +141,6 @@ mod test {
     use super::Payload;
     use super::Query;
     use super::Response;
-
-    use super::super::utils::test;
 
 
     fn new_package(payload: Payload) -> Package {

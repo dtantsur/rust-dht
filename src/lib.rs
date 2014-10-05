@@ -15,9 +15,7 @@
 //!
 //! 1. DHT neighborhood table implementation, will be represented by
 //!    `GenericNodeTable` trait and `knodetable::KNodeTable` implementation.
-//! 2. RPC implementation, will be represented by `GenericRpc` trait,
-//!    with basic implementation in `krpc::KRpc` and more implementations
-//!    in the future.
+//! 2. RPC implementation, will be represented by `GenericRpc` trait.
 //! 3. Generic struct `Service<TNodeTable: GenericNodeTable, TRpc: GenericRpc>`
 //!    that will connect previous two.
 
@@ -42,10 +40,10 @@ pub use service::Service;
 
 #[unstable]
 pub mod base;
+#[experimental]
+pub mod bt;
 #[unstable]
 pub mod knodetable;
-#[experimental]
-pub mod krpc;
 #[experimental]
 pub mod service;
 
