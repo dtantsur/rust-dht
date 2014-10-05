@@ -15,6 +15,7 @@
 //! let service = dht::bt::KRpcService::new(this_node);
 //! ```
 
+use std::io::net::udp;
 use std::sync;
 
 use super::super::base;
@@ -27,6 +28,12 @@ use super::super::knodetable;
 pub struct KRpcService<TNodeTable: base::GenericNodeTable> {
     this_node: base::Node,
     node_table: sync::Arc<sync::RWLock<TNodeTable>>,
+}
+
+
+fn handle_incoming(socket: udp::UdpSocket) {
+    // TODO(divius): implement
+    drop(socket);
 }
 
 impl KRpcService<knodetable::KNodeTable> {
@@ -42,6 +49,10 @@ impl<TNodeTable: base::GenericNodeTable> KRpcService<TNodeTable> {
     /// New service with given node table.
     pub fn new(this_node: base::Node, node_table: TNodeTable)
             -> KRpcService<TNodeTable> {
+        let socket = udp::UdpSocket::bind(this_node.address.clone()).ok()
+            .expect(format!("Cannot bind to {}", this_node.address).as_slice());
+        spawn(proc() handle_incoming(socket));
+
         KRpcService {
             this_node: this_node,
             node_table: sync::Arc::new(sync::RWLock::new(node_table)),

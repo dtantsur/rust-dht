@@ -33,7 +33,7 @@ pub mod test {
     use super::super::Node;
 
 
-    pub static ADDR: &'static str = "127.0.0.1:80";
+    pub static ADDR: &'static str = "127.0.0.1:8008";
 
     pub fn new_node(id: uint) -> Node {
         Node {

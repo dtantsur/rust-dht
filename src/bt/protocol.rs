@@ -247,7 +247,7 @@ mod test {
         let n = test::new_node(42);
         let enc = n.to_bencode();
         let mut expected = Vec::from_elem(19, 0u8);
-        expected.push_all([42, 127, 0, 0, 1, 0, 80]);
+        expected.push_all([42, 127, 0, 0, 1, 31, 72]);
         assert_eq!(bencode::ByteString(expected), enc);
     }
 
