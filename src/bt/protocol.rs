@@ -11,6 +11,7 @@
 //! [BEP 0005](http://www.bittorrent.org/beps/bep_0005.html).
 
 use std::collections;
+use std::path::BytesContainer;
 
 use bencode::{mod, FromBencode, ToBencode};
 use bencode::util::ByteString;
@@ -23,10 +24,11 @@ use super::super::utils;
 // TODO(divius): actually validate it
 static ID_BYTE_SIZE: uint = 20;
 
-/// Mapping String -> Bytes used in payload.
-pub type PayloadDict = collections::TreeMap<String, Vec<u8>>;
+/// Type of payload dict.
+pub type PayloadDict = bencode::DictMap;
 
 /// Package payload in KRPC: either Query (request) or Response or Error.
+#[deriving(Show)]
 pub enum Payload {
     /// Request to a node.
     Query(PayloadDict),
@@ -42,9 +44,21 @@ pub struct Package {
     pub transaction_id: Vec<u8>,
     /// Package payload.
     pub payload: Payload,
-    /// Sender Node (note that as per BEP 0005 it is stored in payload).
-    pub sender: base::Node
+    /// Sender node if known.
+    ///
+    /// Note that as per BEP 0005 it is stored in payload and thus is not set
+    /// for errors.
+    pub sender: Option<base::Node>
 }
+
+
+const QUERY: &'static str = "q";
+const RESPONSE: &'static str = "r";
+const ERROR: &'static str = "e";
+
+const TYPE: &'static str = "y";
+const TR_ID: &'static str = "tt";
+const SENDER: &'static str = "id";
 
 
 fn id_to_netbytes(id: &num::BigUint) -> Vec<u8> {
@@ -89,39 +103,131 @@ impl FromBencode for base::Node {
                 id: id_from_netbytes(v.slice(0, 20)),
                 address: utils::netaddr_from_netbytes(v.slice(20, 26))
             }),
-            _ => None
+            _ => {
+                debug!("{} is unexpected representation for a node", b);
+                None
+            }
         }
     }
 }
 
-impl Package {
-    fn payload_dict_to_bencode(&self, d: &PayloadDict) -> bencode::Bencode {
-        let mut result: bencode::DictMap = d.iter().map(|(k, v)| {
-            (ByteString::from_str(k.as_slice()), v.to_bencode())
-        }).collect();
-        result.insert(ByteString::from_str("id"), self.sender.to_bencode());
-        bencode::Dict(result)
+fn dict_with_sender(dict: &PayloadDict, maybe_sender: &Option<base::Node>)
+        -> bencode::Bencode {
+    let mut d = dict.clone();
+    if let Some(ref sender) = *maybe_sender {
+        d.insert(ByteString::from_str(SENDER), sender.to_bencode());
     }
+    bencode::Dict(d)
 }
 
 impl ToBencode for Package {
     fn to_bencode(&self) -> bencode::Bencode {
         let mut result: bencode::DictMap = collections::TreeMap::new();
 
-        result.insert(ByteString::from_str("tt"),
+        result.insert(ByteString::from_str(TR_ID),
                       bencode::ByteString(self.transaction_id.clone()));
         let (typ, payload) = match self.payload {
-            Query(ref d) => ("q", self.payload_dict_to_bencode(d)),
-            Response(ref d) => ("r", self.payload_dict_to_bencode(d)),
+            Query(ref d) => (QUERY, dict_with_sender(d, &self.sender)),
+            Response(ref d) => (RESPONSE, dict_with_sender(d, &self.sender)),
             Error(code, ref s) => {
                 let l = vec![code.to_bencode(), s.to_bencode()];
-                ("e", bencode::List(l))
+                (ERROR, bencode::List(l))
             }
         };
-        result.insert(ByteString::from_str("y"), typ.to_string().to_bencode());
+        result.insert(ByteString::from_str(TYPE), typ.to_string().to_bencode());
         result.insert(ByteString::from_str(typ), payload);
 
         bencode::Dict(result)
+    }
+}
+
+macro_rules! debug_and_return(
+    ($( $arg:expr ),*) => ({
+        debug!($( $arg ),*);
+        return None;
+    })
+)
+
+macro_rules! bytes_or_none(
+    ($dict:ident, $key:expr, $msg:expr) => (
+        match $dict.find(&ByteString::from_str($key)) {
+            Some(&bencode::ByteString(ref val)) => val,
+            _ => debug_and_return!($msg)
+        }
+    )
+)
+
+impl FromBencode for Package {
+    fn from_bencode(b: &bencode::Bencode) -> Option<Package> {
+        let dict = match *b {
+            bencode::Dict(ref d) => d,
+            _ => debug_and_return!("Expected dict as top-level package, got {}", b)
+        };
+
+        let typ = bytes_or_none!(dict, TYPE, "No type");
+        let payload_data = match dict.find(&ByteString::from_vec(typ.clone())) {
+            Some(val) => val,
+            None => debug_and_return!("No payload")
+        };
+        let mut sender = None;
+
+        let payload = match typ.container_as_str() {
+            Some(ERROR) => match *payload_data {
+                bencode::List(ref v) => match v.as_slice() {
+                    [bencode::Number(code), bencode::ByteString(ref msg)] => {
+                        let str_msg = match msg.container_as_str() {
+                            Some(s) => s,
+                            None => {
+                                debug!("Error message is not UTF8: {}", msg);
+                                "Unknown error"
+                            }
+                        };
+                        Error(code, str_msg.to_string())
+                    },
+                    _ => debug_and_return!(
+                        "Error body of unknown structure {}", v)
+                },
+                _ => debug_and_return!("Error body of unexpected type: {}",
+                                       payload_data)
+            },
+            Some(QUERY) => match *payload_data {
+                bencode::Dict(ref d) => {
+                    let mut d2 = d.clone();
+                    sender = d2.pop(&ByteString::from_str(SENDER));
+                    if sender.is_none() {
+                        debug_and_return!("No sender ID in query");
+                    };
+                    Query(d2)
+                },
+                _ => debug_and_return!("Query body of unexpected type: {}",
+                                       payload_data)
+            },
+            Some(RESPONSE) => match *payload_data {
+                bencode::Dict(ref d) => {
+                    let mut d2 = d.clone();
+                    sender = d2.pop(&ByteString::from_str(SENDER));
+                    if sender.is_none() {
+                        debug_and_return!("No sender ID in response");
+                    };
+                    Response(d2)
+                },
+                _ => debug_and_return!("Response body of unexpected type: {}",
+                                       payload_data)
+            },
+            Some(unknown) => debug_and_return!("Unexpected payload type {}",
+                                               unknown),
+            None => debug_and_return!("Not a UTF8 string: field y, value {}",
+                                      typ)
+        };
+
+        let sender_node = sender.and_then(|s| FromBencode::from_bencode(&s));
+
+        let tt = bytes_or_none!(dict, TR_ID, "No transaction id");
+        Some(Package {
+            transaction_id: tt.clone(),
+            payload: payload,
+            sender: sender_node
+        })
     }
 }
 
@@ -143,10 +249,12 @@ mod test {
     use super::Response;
 
 
+    const FAKE_TR_ID: &'static [u8] = [1, 2, 254, 255];
+
     fn new_package(payload: Payload) -> Package {
         Package {
-            transaction_id: vec![1, 2, 254, 255],
-            sender: test::new_node(42),
+            transaction_id: FAKE_TR_ID.to_vec(),
+            sender: Some(test::new_node(42)),
             payload: payload
         }
     }
@@ -204,6 +312,22 @@ mod test {
         assert_eq!(vec![bencode::Number(10),
                         "error".to_string().to_bencode()],
                    *l);
+    }
+
+    #[test]
+    fn test_error_to_from_bencode() {
+        let p = new_package(Error(10, "error".to_string()));
+        let enc = p.to_bencode();
+        let p2: Package = FromBencode::from_bencode(&enc).unwrap();
+        assert_eq!(FAKE_TR_ID, p2.transaction_id.as_slice());
+        assert!(p2.sender.is_none());
+        if let Error(code, msg) = p2.payload {
+            assert_eq!(10, code);
+            assert_eq!("error", msg.as_slice());
+        }
+        else {
+            fail!("Expected Error, got {}", p2.payload);
+        }
     }
 
     #[test]

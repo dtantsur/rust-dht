@@ -20,8 +20,10 @@
 #![crate_type = "lib"]
 #![unstable]
 
-#![feature(struct_variant)]
+#![feature(if_let)]
+#![feature(macro_rules)]
 #![feature(phase)]
+#![feature(struct_variant)]
 
 extern crate bencode;
 extern crate num;
