@@ -157,6 +157,23 @@ macro_rules! bytes_or_none(
     )
 )
 
+macro_rules! extract_sender(
+    ($dict:ident, $ty:expr, $msg:expr) => ({
+        let mut d = $dict.clone();
+        if let Some(sender_be) = d.pop(&ByteString::from_str(SENDER)) {
+            if let Some(sender) = FromBencode::from_bencode(&sender_be) {
+                ($ty(d), sender)
+            }
+            else {
+                debug_and_return!("Cannot decode sender {}", sender_be);
+            }
+        }
+        else {
+            debug_and_return!($msg);
+        }
+    })
+)
+
 impl FromBencode for Package {
     fn from_bencode(b: &bencode::Bencode) -> Option<Package> {
         let dict = match *b {
@@ -169,9 +186,8 @@ impl FromBencode for Package {
             Some(val) => val,
             None => debug_and_return!("No payload")
         };
-        let mut sender = None;
 
-        let payload = match typ.container_as_str() {
+        let (payload, sender) = match typ.container_as_str() {
             Some(ERROR) => match *payload_data {
                 bencode::List(ref v) => match v.as_slice() {
                     [bencode::Number(code), bencode::ByteString(ref msg)] => {
@@ -182,7 +198,7 @@ impl FromBencode for Package {
                                 "Unknown error"
                             }
                         };
-                        Error(code, str_msg.to_string())
+                        (Error(code, str_msg.to_string()), None)
                     },
                     _ => debug_and_return!(
                         "Error body of unknown structure {}", v)
@@ -191,26 +207,14 @@ impl FromBencode for Package {
                                        payload_data)
             },
             Some(QUERY) => match *payload_data {
-                bencode::Dict(ref d) => {
-                    let mut d2 = d.clone();
-                    sender = d2.pop(&ByteString::from_str(SENDER));
-                    if sender.is_none() {
-                        debug_and_return!("No sender ID in query");
-                    };
-                    Query(d2)
-                },
+                bencode::Dict(ref d) =>
+                    extract_sender!(d, Query, "No sender ID in query"),
                 _ => debug_and_return!("Query body of unexpected type: {}",
                                        payload_data)
             },
             Some(RESPONSE) => match *payload_data {
-                bencode::Dict(ref d) => {
-                    let mut d2 = d.clone();
-                    sender = d2.pop(&ByteString::from_str(SENDER));
-                    if sender.is_none() {
-                        debug_and_return!("No sender ID in response");
-                    };
-                    Response(d2)
-                },
+                bencode::Dict(ref d) =>
+                    extract_sender!(d, Response, "No sender ID in response"),
                 _ => debug_and_return!("Response body of unexpected type: {}",
                                        payload_data)
             },
@@ -220,13 +224,11 @@ impl FromBencode for Package {
                                       typ)
         };
 
-        let sender_node = sender.and_then(|s| FromBencode::from_bencode(&s));
-
         let tt = bytes_or_none!(dict, TR_ID, "No transaction id");
         Some(Package {
             transaction_id: tt.clone(),
             payload: payload,
-            sender: sender_node
+            sender: sender
         })
     }
 }
@@ -340,12 +342,44 @@ mod test {
     }
 
     #[test]
+    fn test_query_to_from_bencode() {
+        let payload: PayloadDict = collections::TreeMap::new();
+        let p = new_package(Query(payload));
+        let enc = p.to_bencode();
+        let p2: Package = FromBencode::from_bencode(&enc).unwrap();
+        assert_eq!(FAKE_TR_ID, p2.transaction_id.as_slice());
+        assert_eq!(test::uint_to_id(42), p2.sender.unwrap().id);
+        if let Query(d) = p2.payload {
+            // TODO(divius): test
+        }
+        else {
+            fail!("Expected Query, got {}", p2.payload);
+        }
+    }
+
+    #[test]
     fn test_response_to_bencode() {
         let payload: PayloadDict = collections::TreeMap::new();
         let p = new_package(Response(payload));
         let enc = p.to_bencode();
         dict(&enc, "r");
         // TODO(divius): Moar tests
+    }
+
+    #[test]
+    fn test_response_to_from_bencode() {
+        let payload: PayloadDict = collections::TreeMap::new();
+        let p = new_package(Response(payload));
+        let enc = p.to_bencode();
+        let p2: Package = FromBencode::from_bencode(&enc).unwrap();
+        assert_eq!(FAKE_TR_ID, p2.transaction_id.as_slice());
+        assert_eq!(test::uint_to_id(42), p2.sender.unwrap().id);
+        if let Response(d) = p2.payload {
+            // TODO(divius): test
+        }
+        else {
+            fail!("Expected Response, got {}", p2.payload);
+        }
     }
 
     #[test]
