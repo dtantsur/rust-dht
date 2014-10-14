@@ -88,6 +88,12 @@ fn id_from_netbytes(bytes: &[u8]) -> num::BigUint {
     result
 }
 
+/// Helper function to build key for payload dict.
+#[inline]
+pub fn key(s: &str) -> ByteString {
+    ByteString::from_str(s)
+}
+
 impl ToBencode for base::Node {
     fn to_bencode(&self) -> bencode::Bencode {
         let mut result = id_to_netbytes(&self.id);
@@ -115,7 +121,7 @@ fn dict_with_sender(dict: &PayloadDict, maybe_sender: &Option<base::Node>)
         -> bencode::Bencode {
     let mut d = dict.clone();
     if let Some(ref sender) = *maybe_sender {
-        d.insert(ByteString::from_str(SENDER), sender.to_bencode());
+        d.insert(key(SENDER), sender.to_bencode());
     }
     bencode::Dict(d)
 }
@@ -124,7 +130,7 @@ impl ToBencode for Package {
     fn to_bencode(&self) -> bencode::Bencode {
         let mut result: bencode::DictMap = collections::TreeMap::new();
 
-        result.insert(ByteString::from_str(TR_ID),
+        result.insert(key(TR_ID),
                       bencode::ByteString(self.transaction_id.clone()));
         let (typ, payload) = match self.payload {
             Query(ref d) => (QUERY, dict_with_sender(d, &self.sender)),
@@ -134,8 +140,8 @@ impl ToBencode for Package {
                 (ERROR, bencode::List(l))
             }
         };
-        result.insert(ByteString::from_str(TYPE), typ.to_string().to_bencode());
-        result.insert(ByteString::from_str(typ), payload);
+        result.insert(key(TYPE), typ.to_string().to_bencode());
+        result.insert(key(typ), payload);
 
         bencode::Dict(result)
     }
@@ -150,7 +156,7 @@ macro_rules! debug_and_return(
 
 macro_rules! bytes_or_none(
     ($dict:ident, $key:expr, $msg:expr) => (
-        match $dict.find(&ByteString::from_str($key)) {
+        match $dict.find(&key($key)) {
             Some(&bencode::ByteString(ref val)) => val,
             _ => debug_and_return!($msg)
         }
@@ -160,7 +166,7 @@ macro_rules! bytes_or_none(
 macro_rules! extract_sender(
     ($dict:ident, $ty:expr, $msg:expr) => ({
         let mut d = $dict.clone();
-        if let Some(sender_be) = d.pop(&ByteString::from_str(SENDER)) {
+        if let Some(sender_be) = d.pop(&key(SENDER)) {
             if let Some(sender) = FromBencode::from_bencode(&sender_be) {
                 ($ty(d), sender)
             }
@@ -244,6 +250,7 @@ mod test {
     use super::super::super::base;
     use super::super::super::utils::test;
 
+    use super::key;
     use super::PayloadDict;
     use super::Error;
     use super::Package;
@@ -265,7 +272,7 @@ mod test {
     fn common<'a>(b: &'a bencode::Bencode, typ: &str) -> &'a bencode::DictMap {
         match *b {
             bencode::Dict(ref d) => {
-                let tt_val = &d[bencode::util::ByteString::from_str("tt")];
+                let tt_val = &d[key("tt")];
                 match *tt_val {
                     bencode::ByteString(ref v) => {
                         assert_eq!(vec![1, 2, 254, 255], *v);
@@ -273,7 +280,7 @@ mod test {
                     _ => fail!("unexpected {}", tt_val)
                 };
 
-                let y_val = &d[bencode::util::ByteString::from_str("y")];
+                let y_val = &d[key("y")];
                 match *y_val {
                     bencode::ByteString(ref v) => {
                         assert_eq!(typ.as_bytes(), v.as_slice());
@@ -290,7 +297,7 @@ mod test {
     fn dict<'a>(b: &'a bencode::Bencode, typ: &str) -> &'a bencode::DictMap {
         let d = common(b, typ);
 
-        let typ_val = &d[bencode::util::ByteString::from_str(typ)];
+        let typ_val = &d[key(typ)];
         match *typ_val {
             bencode::Dict(ref m) => m,
             _ => fail!("unexpected {}", typ_val)
@@ -300,7 +307,7 @@ mod test {
     fn list<'a>(b: &'a bencode::Bencode, typ: &str) -> &'a bencode::ListVec {
         let d = common(b, typ);
 
-        let typ_val = &d[bencode::util::ByteString::from_str(typ)];
+        let typ_val = &d[key(typ)];
         match *typ_val {
             bencode::List(ref l) => l,
             _ => fail!("unexpected {}", typ_val)
@@ -340,14 +347,13 @@ mod test {
         let enc = p.to_bencode();
         let d = dict(&enc, "q");
         assert_eq!(1, d.len());
-        assert!(d.contains_key(&ByteString::from_str("id")));
+        assert!(d.contains_key(&key("id")));
     }
 
     #[test]
     fn test_query_to_from_bencode() {
         let mut payload: PayloadDict = collections::TreeMap::new();
-        payload.insert(ByteString::from_str("test"),
-                       "ok".to_string().to_bencode());
+        payload.insert(key("test"), "ok".to_string().to_bencode());
         let p = new_package(Query(payload));
         let enc = p.to_bencode();
         let p2: Package = FromBencode::from_bencode(&enc).unwrap();
@@ -356,7 +362,7 @@ mod test {
         if let Query(d) = p2.payload {
             assert_eq!(1, d.len());
             assert_eq!(bencode::ByteString(vec![111, 107]),
-                       d[ByteString::from_str("test")]);
+                       d[key("test")]);
         }
         else {
             fail!("Expected Query, got {}", p2.payload);
@@ -370,14 +376,13 @@ mod test {
         let enc = p.to_bencode();
         let d = dict(&enc, "r");
         assert_eq!(1, d.len());
-        assert!(d.contains_key(&ByteString::from_str("id")));
+        assert!(d.contains_key(&key("id")));
     }
 
     #[test]
     fn test_response_to_from_bencode() {
         let mut payload: PayloadDict = collections::TreeMap::new();
-        payload.insert(ByteString::from_str("test"),
-                       "ok".to_string().to_bencode());
+        payload.insert(key("test"), "ok".to_string().to_bencode());
         let p = new_package(Response(payload));
         let enc = p.to_bencode();
         let p2: Package = FromBencode::from_bencode(&enc).unwrap();
@@ -386,7 +391,7 @@ mod test {
         if let Response(d) = p2.payload {
             assert_eq!(1, d.len());
             assert_eq!(bencode::ByteString(vec![111, 107]),
-                       d[ByteString::from_str("test")]);
+                       d[key("test")]);
         }
         else {
             fail!("Expected Response, got {}", p2.payload);
