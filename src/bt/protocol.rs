@@ -239,6 +239,7 @@ mod test {
     use std::collections;
 
     use bencode::{mod, FromBencode, ToBencode};
+    use bencode::util::ByteString;
 
     use super::super::super::base;
     use super::super::super::utils::test;
@@ -335,22 +336,27 @@ mod test {
     #[test]
     fn test_query_to_bencode() {
         let payload: PayloadDict = collections::TreeMap::new();
-        let p = new_package(Query(payload));
+        let p = new_package(Query(payload.clone()));
         let enc = p.to_bencode();
-        dict(&enc, "q");
-        // TODO(divius): Moar tests
+        let d = dict(&enc, "q");
+        assert_eq!(1, d.len());
+        assert!(d.contains_key(&ByteString::from_str("id")));
     }
 
     #[test]
     fn test_query_to_from_bencode() {
-        let payload: PayloadDict = collections::TreeMap::new();
+        let mut payload: PayloadDict = collections::TreeMap::new();
+        payload.insert(ByteString::from_str("test"),
+                       "ok".to_string().to_bencode());
         let p = new_package(Query(payload));
         let enc = p.to_bencode();
         let p2: Package = FromBencode::from_bencode(&enc).unwrap();
         assert_eq!(FAKE_TR_ID, p2.transaction_id.as_slice());
         assert_eq!(test::uint_to_id(42), p2.sender.unwrap().id);
         if let Query(d) = p2.payload {
-            // TODO(divius): test
+            assert_eq!(1, d.len());
+            assert_eq!(bencode::ByteString(vec![111, 107]),
+                       d[ByteString::from_str("test")]);
         }
         else {
             fail!("Expected Query, got {}", p2.payload);
@@ -362,20 +368,25 @@ mod test {
         let payload: PayloadDict = collections::TreeMap::new();
         let p = new_package(Response(payload));
         let enc = p.to_bencode();
-        dict(&enc, "r");
-        // TODO(divius): Moar tests
+        let d = dict(&enc, "r");
+        assert_eq!(1, d.len());
+        assert!(d.contains_key(&ByteString::from_str("id")));
     }
 
     #[test]
     fn test_response_to_from_bencode() {
-        let payload: PayloadDict = collections::TreeMap::new();
+        let mut payload: PayloadDict = collections::TreeMap::new();
+        payload.insert(ByteString::from_str("test"),
+                       "ok".to_string().to_bencode());
         let p = new_package(Response(payload));
         let enc = p.to_bencode();
         let p2: Package = FromBencode::from_bencode(&enc).unwrap();
         assert_eq!(FAKE_TR_ID, p2.transaction_id.as_slice());
         assert_eq!(test::uint_to_id(42), p2.sender.unwrap().id);
         if let Response(d) = p2.payload {
-            // TODO(divius): test
+            assert_eq!(1, d.len());
+            assert_eq!(bencode::ByteString(vec![111, 107]),
+                       d[ByteString::from_str("test")]);
         }
         else {
             fail!("Expected Response, got {}", p2.payload);
