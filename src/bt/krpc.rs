@@ -71,6 +71,13 @@ KRpcService<TNodeTable, TSocket> {
     pub fn node_table_lock(&self) -> &sync::RWLock<TNodeTable> {
         self.node_table.deref()
     }
+
+    /// Get reference to a socket wrapper.
+    ///
+    /// Clone it if you want to get mutable copy.
+    pub fn socket_ref(&self) -> &TSocket {
+        &self.socket
+    }
 }
 
 
