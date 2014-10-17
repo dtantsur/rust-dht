@@ -15,48 +15,56 @@
 //! let service = dht::bt::KRpcService::new(this_node);
 //! ```
 
-use std::io::net::udp;
+use std::io::IoResult;
 use std::sync;
 
 use super::super::base;
 use super::super::knodetable;
 
+use super::udpwrapper;
+
 
 /// Implementation of basic KRPC DHT on which BitTorrent DHT is based.
 ///
 /// No peer retrival is supported: just finding and pinging nodes.
-pub struct KRpcService<TNodeTable: base::GenericNodeTable> {
+pub struct KRpcService<TNodeTable: base::GenericNodeTable,
+                       TSocket: udpwrapper::GenericSocketWrapper> {
     this_node: base::Node,
     node_table: sync::Arc<sync::RWLock<TNodeTable>>,
+    socket: TSocket,
 }
 
+/// Default kind of KRpc service.
+pub type DefaultKRpcService = KRpcService<knodetable::KNodeTable, udpwrapper::UdpSocketWrapper>;
 
-fn handle_incoming(socket: udp::UdpSocket) {
+
+fn handle_incoming<TSocket: udpwrapper::GenericSocketWrapper>(socket: TSocket) {
     // TODO(divius): implement
     drop(socket);
 }
 
-impl KRpcService<knodetable::KNodeTable> {
+impl KRpcService<knodetable::KNodeTable, udpwrapper::UdpSocketWrapper> {
     /// New service with default node table.
-    pub fn new_default(this_node: base::Node)
-            -> KRpcService<knodetable::KNodeTable> {
+    pub fn new_default(this_node: base::Node) -> IoResult<DefaultKRpcService> {
         let node_table = knodetable::KNodeTable::new(this_node.id.clone());
-        KRpcService::new(this_node, node_table)
+        let socket = try!(udpwrapper::UdpSocketWrapper::new(&this_node));
+        KRpcService::new(this_node, node_table, socket)
     }
 }
 
-impl<TNodeTable: base::GenericNodeTable> KRpcService<TNodeTable> {
-    /// New service with given node table.
-    pub fn new(this_node: base::Node, node_table: TNodeTable)
-            -> KRpcService<TNodeTable> {
-        let socket = udp::UdpSocket::bind(this_node.address.clone()).ok()
-            .expect(format!("Cannot bind to {}", this_node.address).as_slice());
-        spawn(proc() handle_incoming(socket));
+impl<TNodeTable: base::GenericNodeTable, TSocket: udpwrapper::GenericSocketWrapper>
+KRpcService<TNodeTable, TSocket> {
+    /// New service with given node table and socket.
+    pub fn new(this_node: base::Node, node_table: TNodeTable, socket: TSocket)
+            -> IoResult<KRpcService<TNodeTable, TSocket>> {
+        let listening_socket = socket.clone();
+        spawn(proc() handle_incoming(listening_socket));
 
-        KRpcService {
+        Ok(KRpcService {
             this_node: this_node,
             node_table: sync::Arc::new(sync::RWLock::new(node_table)),
-        }
+            socket: socket,
+        })
     }
 
     /// Get lock guarding access to a node table.
@@ -68,10 +76,16 @@ impl<TNodeTable: base::GenericNodeTable> KRpcService<TNodeTable> {
 
 #[cfg(test)]
 mod test {
+    use std::io::IoResult;
+    use std::io::net::ip;
+
     use num;
 
     use super::super::super::base::{mod, GenericNodeTable};
     use super::super::super::utils::test;
+
+    use super::super::protocol;
+    use super::super::udpwrapper::GenericSocketWrapper;
 
     use super::KRpcService;
 
@@ -102,12 +116,34 @@ mod test {
         }
     }
 
+    #[deriving(Clone)]
+    struct DummySocketWrapper {
+        last_package: Option<protocol::Package>,
+        last_node: Option<base::Node>
+    }
+
+    impl GenericSocketWrapper for DummySocketWrapper {
+        fn send(&mut self, package: &protocol::Package, node: &base::Node)
+            -> IoResult<()> {
+            self.last_package = Some(package.clone());
+            self.last_node = Some(node.clone());
+            Ok(())
+        }
+
+        fn receive(&mut self) -> IoResult<(protocol::Package, ip::SocketAddr)> {
+            Ok((self.last_package.as_ref().unwrap().clone(),
+                self.last_node.as_ref().unwrap().address.clone()))
+        }
+    }
+
 
     #[test]
     fn test_new() {
         let n = test::new_node_with_port(42, 8007);
+        let sock = DummySocketWrapper { last_package: None, last_node: None };
         let s = KRpcService::new(n.clone(),
-                                 DummyNodeTable { last_node: None });
+                                 DummyNodeTable { last_node: None },
+                                 sock).unwrap();
         assert_eq!(n.id, s.this_node.id);
         let mut nt = s.node_table_lock().write();
         nt.update(&test::new_node(1));
@@ -118,7 +154,7 @@ mod test {
     #[test]
     fn test_new_default() {
         let n = test::new_node_with_port(42, 8009);
-        let s = KRpcService::new_default(n.clone());
+        let s = KRpcService::new_default(n.clone()).unwrap();
         assert_eq!(n.id, s.this_node.id);
         let nt = s.node_table_lock().read();
         assert_eq!(0, nt.find(&test::uint_to_id(1), 1).len());
