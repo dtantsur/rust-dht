@@ -9,6 +9,7 @@
 
 //! BitTorrent DHT implementation.
 
+pub use self::krpc::DefaultKRpcService;
 pub use self::krpc::KRpcService;
 
 #[experimental]
