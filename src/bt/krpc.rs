@@ -12,7 +12,7 @@
 //!
 //! Create as:
 //! ```
-//! let service = dht::bt::KRpcService::new(this_node);
+//! let service = dht::bt::KRpcService::new_default(this_node);
 //! ```
 
 use std::io::IoResult;
