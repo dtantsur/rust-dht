@@ -13,7 +13,7 @@
 //! for different kind of Rust applications. There will be loosely coupled parts:
 //!
 //! 1. DHT neighborhood table implementation, will be represented by
-//!    `GenericNodeTable` trait and `knodetable::KNodeTable` implementation.
+//!    `GenericNodeTable` trait and `KNodeTable` implementation.
 //! 2. Particular implementations, first one is `bt::KRpcService`.
 
 #![crate_name = "dht"]
@@ -34,12 +34,13 @@ extern crate log;
 
 pub use base::GenericNodeTable;
 pub use base::Node;
+pub use knodetable::KNodeTable;
 
 #[unstable]
-pub mod base;
+mod base;
 #[experimental]
 pub mod bt;
 #[unstable]
-pub mod knodetable;
+mod knodetable;
 
 mod utils;
