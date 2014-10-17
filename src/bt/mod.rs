@@ -14,7 +14,7 @@ pub use self::krpc::KRpcService;
 
 #[experimental]
 mod krpc;
-#[experimental]
+#[unstable]
 pub mod protocol;
-#[experimental]
+#[unstable]
 pub mod udpwrapper;

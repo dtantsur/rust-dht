@@ -9,11 +9,6 @@
 
 //! KRPC DHT service as described in
 //! [BEP 0005](http://www.bittorrent.org/beps/bep_0005.html).
-//!
-//! Create as:
-//! ```
-//! let service = dht::bt::KRpcService::new_default(this_node);
-//! ```
 
 use std::io::IoResult;
 use std::sync;
@@ -24,9 +19,14 @@ use super::super::knodetable;
 use super::udpwrapper;
 
 
-/// Implementation of basic KRPC DHT on which BitTorrent DHT is based.
+/// Generic implementation of basic KRPC DHT on which BitTorrent DHT is based.
 ///
 /// No peer retrival is supported: just finding and pinging nodes.
+///
+/// Usually you will be creating it as:
+/// ```
+/// let service = dht::bt::KRpcService::new_default(this_node);
+/// ```
 pub struct KRpcService<TNodeTable: base::GenericNodeTable,
                        TSocket: udpwrapper::GenericSocketWrapper> {
     this_node: base::Node,
