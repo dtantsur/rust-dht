@@ -32,15 +32,33 @@ pub struct KRpcService<TNodeTable: base::GenericNodeTable,
     this_node: base::Node,
     node_table: sync::Arc<sync::RWLock<TNodeTable>>,
     socket: TSocket,
+    notification_sender: Sender<()>,
 }
 
 /// Default kind of KRpc service.
 pub type DefaultKRpcService = KRpcService<knodetable::KNodeTable, udpwrapper::UdpSocketWrapper>;
 
 
-fn handle_incoming<TSocket: udpwrapper::GenericSocketWrapper>(socket: TSocket) {
+// This can't be derived, compiler is confused because of Arc.
+impl<TNodeTable: base::GenericNodeTable,
+     TSocket: udpwrapper::GenericSocketWrapper>
+Clone for KRpcService<TNodeTable, TSocket> {
+    fn clone(&self) -> KRpcService<TNodeTable, TSocket> {
+        KRpcService {
+            this_node: self.this_node.clone(),
+            node_table: self.node_table.clone(),
+            socket: self.socket.clone(),
+            notification_sender: self.notification_sender.clone()
+        }
+    }
+}
+
+fn handle_incoming<TNodeTable: base::GenericNodeTable,
+                   TSocket: udpwrapper::GenericSocketWrapper>
+                   (service: KRpcService<TNodeTable, TSocket>,
+                    notification_receiver: Receiver<()>) {
+    while notification_receiver.try_recv().is_err() {}
     // TODO(divius): implement
-    drop(socket);
 }
 
 impl KRpcService<knodetable::KNodeTable, udpwrapper::UdpSocketWrapper> {
@@ -52,19 +70,25 @@ impl KRpcService<knodetable::KNodeTable, udpwrapper::UdpSocketWrapper> {
     }
 }
 
-impl<TNodeTable: base::GenericNodeTable, TSocket: udpwrapper::GenericSocketWrapper>
+impl<TNodeTable: base::GenericNodeTable,
+     TSocket: udpwrapper::GenericSocketWrapper>
 KRpcService<TNodeTable, TSocket> {
     /// New service with given node table and socket.
     pub fn new(this_node: base::Node, node_table: TNodeTable, socket: TSocket)
             -> IoResult<KRpcService<TNodeTable, TSocket>> {
-        let listening_socket = socket.clone();
-        spawn(proc() handle_incoming(listening_socket));
+        let (tx, rx) = channel();
 
-        Ok(KRpcService {
+        let self_ = KRpcService {
             this_node: this_node,
             node_table: sync::Arc::new(sync::RWLock::new(node_table)),
             socket: socket,
-        })
+            notification_sender: tx,
+        };
+
+        let self_clone = self_.clone();
+        spawn(proc() handle_incoming(self_clone, rx));
+
+        Ok(self_)
     }
 
     /// Get lock guarding access to a node table.
@@ -80,6 +104,14 @@ KRpcService<TNodeTable, TSocket> {
     }
 }
 
+#[unsafe_destructor]
+impl<TNodeTable: base::GenericNodeTable,
+     TSocket: udpwrapper::GenericSocketWrapper>
+Drop for KRpcService<TNodeTable, TSocket> {
+    fn drop(&mut self) {
+        self.notification_sender.send(());
+    }
+}
 
 #[cfg(test)]
 mod test {

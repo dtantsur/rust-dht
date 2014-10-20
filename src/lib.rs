@@ -24,6 +24,7 @@
 #![feature(macro_rules)]
 #![feature(phase)]
 #![feature(struct_variant)]
+#![feature(unsafe_destructor)]
 
 extern crate bencode;
 extern crate num;
