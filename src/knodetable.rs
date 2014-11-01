@@ -95,7 +95,7 @@ impl GenericNodeTable for KNodeTable {
     fn update(&mut self, node: &Node) -> bool {
         assert!(node.id != self.this_id);
         let bucket = self.bucket_number(&node.id);
-        self.buckets.get_mut(bucket).update(node)
+        self.buckets[bucket].update(node)
     }
 
     fn find(&self, id: &num::BigUint, count: uint) -> Vec<Node> {

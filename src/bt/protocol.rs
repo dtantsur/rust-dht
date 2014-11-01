@@ -278,7 +278,7 @@ mod test {
                     bencode::ByteString(ref v) => {
                         assert_eq!(vec![1, 2, 254, 255], *v);
                     },
-                    _ => fail!("unexpected {}", tt_val)
+                    _ => panic!("unexpected {}", tt_val)
                 };
 
                 let y_val = &d[key("y")];
@@ -286,12 +286,12 @@ mod test {
                     bencode::ByteString(ref v) => {
                         assert_eq!(typ.as_bytes(), v.as_slice());
                     },
-                    _ => fail!("unexpected {}", y_val)
+                    _ => panic!("unexpected {}", y_val)
                 };
 
                 d
             },
-            _ => fail!("unexpected {}", b)
+            _ => panic!("unexpected {}", b)
         }
     }
 
@@ -301,7 +301,7 @@ mod test {
         let typ_val = &d[key(typ)];
         match *typ_val {
             bencode::Dict(ref m) => m,
-            _ => fail!("unexpected {}", typ_val)
+            _ => panic!("unexpected {}", typ_val)
         }
     }
 
@@ -311,7 +311,7 @@ mod test {
         let typ_val = &d[key(typ)];
         match *typ_val {
             bencode::List(ref l) => l,
-            _ => fail!("unexpected {}", typ_val)
+            _ => panic!("unexpected {}", typ_val)
         }
     }
 
@@ -337,7 +337,7 @@ mod test {
             assert_eq!("error", msg.as_slice());
         }
         else {
-            fail!("Expected Error, got {}", p2.payload);
+            panic!("Expected Error, got {}", p2.payload);
         }
     }
 
@@ -366,7 +366,7 @@ mod test {
                        d[key("test")]);
         }
         else {
-            fail!("Expected Query, got {}", p2.payload);
+            panic!("Expected Query, got {}", p2.payload);
         }
     }
 
@@ -395,7 +395,7 @@ mod test {
                        d[key("test")]);
         }
         else {
-            fail!("Expected Response, got {}", p2.payload);
+            panic!("Expected Response, got {}", p2.payload);
         }
     }
 

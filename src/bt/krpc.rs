@@ -143,7 +143,7 @@ mod test {
             self.last_node = Some(node.clone());
             true
         }
-        #[allow(unused_variable)]
+        #[allow(unused_variables)]
         fn find(&self, id: &num::BigUint, count: uint) -> Vec<base::Node> {
             match self.last_node {
                 Some(ref n) if n.id == *id => vec![n.clone()],

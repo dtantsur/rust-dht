@@ -9,7 +9,7 @@ pub fn netaddr_to_netbytes(addr: &ip::SocketAddr) -> Vec<u8> {
         ip::Ipv4Addr(a, b, c, d) =>
             vec![a, b, c, d, (addr.port >> 8) as u8, (addr.port & 0xFF) as u8],
         // TODO(divius): implement
-        ip::Ipv6Addr(..) => fail!("IPv6 not implemented")
+        ip::Ipv6Addr(..) => panic!("IPv6 not implemented")
     }
 }
 
