@@ -6,7 +6,8 @@ authors = ["Dmitry Tantsur <divius.inside@gmail.com>"]
 
 [dependencies.num]
 
-git = "https://github.com/rust-lang/num"
+;git = "https://github.com/rust-lang/num"
+git = "https://github.com/gifnksm/num"
 
 [dependencies.bencode]
 
