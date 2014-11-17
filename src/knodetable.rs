@@ -15,7 +15,7 @@
 //! using `pop_oldest` call.
 
 use std::cmp;
-use std::num::Zero;
+use num::Zero;
 use std::rand;
 
 use num;

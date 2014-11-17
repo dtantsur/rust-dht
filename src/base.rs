@@ -7,7 +7,7 @@
 // except according to those terms.
 //
 
-use std::from_str::FromStr;
+use std::str::FromStr;
 use std::io::net::ip;
 
 use num;

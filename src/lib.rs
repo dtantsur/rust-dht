@@ -23,7 +23,6 @@
 #![feature(if_let)]
 #![feature(macro_rules)]
 #![feature(phase)]
-#![feature(struct_variant)]
 #![feature(unsafe_destructor)]
 
 extern crate bencode;
