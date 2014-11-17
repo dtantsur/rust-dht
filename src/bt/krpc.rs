@@ -83,7 +83,7 @@ KRpcService<TNodeTable, TSocket> {
             active: sync::Arc::new(sync::RWLock::new(true)),
         };
 
-        let self_clone = self_.clone(); 
+        let self_clone = self_.clone();
         spawn(proc() handle_incoming(self_clone));
 
         Ok(self_)
