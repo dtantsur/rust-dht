@@ -32,7 +32,8 @@ pub struct KRpcService<TNodeTable: base::GenericNodeTable,
     this_node: base::Node,
     node_table: sync::Arc<sync::RWLock<TNodeTable>>,
     socket: TSocket,
-    notification_sender: Sender<()>,
+    // this is for tests only, proper cancelling will follow later
+    active: sync::Arc<sync::RWLock<bool>>,
 }
 
 /// Default kind of KRpc service.
@@ -48,16 +49,15 @@ Clone for KRpcService<TNodeTable, TSocket> {
             this_node: self.this_node.clone(),
             node_table: self.node_table.clone(),
             socket: self.socket.clone(),
-            notification_sender: self.notification_sender.clone()
+            active: self.active.clone(),
         }
     }
 }
 
 fn handle_incoming<TNodeTable: base::GenericNodeTable,
                    TSocket: udpwrapper::GenericSocketWrapper>
-                   (service: KRpcService<TNodeTable, TSocket>,
-                    notification_receiver: Receiver<()>) {
-    while notification_receiver.try_recv().is_err() {}
+                   (service: KRpcService<TNodeTable, TSocket>) {
+    while *service.active.read() {}
     // TODO(divius): implement
 }
 
@@ -76,17 +76,15 @@ KRpcService<TNodeTable, TSocket> {
     /// New service with given node table and socket.
     pub fn new(this_node: base::Node, node_table: TNodeTable, socket: TSocket)
             -> IoResult<KRpcService<TNodeTable, TSocket>> {
-        let (tx, rx) = channel();
-
         let self_ = KRpcService {
             this_node: this_node,
             node_table: sync::Arc::new(sync::RWLock::new(node_table)),
             socket: socket,
-            notification_sender: tx,
+            active: sync::Arc::new(sync::RWLock::new(true)),
         };
 
-        let self_clone = self_.clone();
-        spawn(proc() handle_incoming(self_clone, rx));
+        let self_clone = self_.clone(); 
+        spawn(proc() handle_incoming(self_clone));
 
         Ok(self_)
     }
@@ -109,7 +107,7 @@ impl<TNodeTable: base::GenericNodeTable,
      TSocket: udpwrapper::GenericSocketWrapper>
 Drop for KRpcService<TNodeTable, TSocket> {
     fn drop(&mut self) {
-        self.notification_sender.send(());
+        *self.active.write() = false;
     }
 }
 

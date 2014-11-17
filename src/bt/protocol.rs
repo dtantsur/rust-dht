@@ -157,7 +157,7 @@ macro_rules! debug_and_return(
 
 macro_rules! bytes_or_none(
     ($dict:ident, $key:expr, $msg:expr) => (
-        match $dict.find(&key($key)) {
+        match $dict.get(&key($key)) {
             Some(&bencode::ByteString(ref val)) => val,
             _ => debug_and_return!($msg)
         }
@@ -189,7 +189,7 @@ impl FromBencode for Package {
         };
 
         let typ = bytes_or_none!(dict, TYPE, "No type");
-        let payload_data = match dict.find(&ByteString::from_vec(typ.clone())) {
+        let payload_data = match dict.get(&ByteString::from_vec(typ.clone())) {
             Some(val) => val,
             None => debug_and_return!("No payload")
         };
