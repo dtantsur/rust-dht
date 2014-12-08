@@ -13,7 +13,7 @@
 use std::collections;
 use std::path::BytesContainer;
 
-use bencode::{mod, FromBencode, ToBencode};
+use bencode::{mod, Bencode, FromBencode, ToBencode};
 use bencode::util::ByteString;
 use num;
 
@@ -96,17 +96,17 @@ pub fn key(s: &str) -> ByteString {
 }
 
 impl ToBencode for base::Node {
-    fn to_bencode(&self) -> bencode::Bencode {
+    fn to_bencode(&self) -> Bencode {
         let mut result = id_to_netbytes(&self.id);
         result.push_all(utils::netaddr_to_netbytes(&self.address).as_slice());
-        bencode::ByteString(result)
+        Bencode::ByteString(result)
     }
 }
 
 impl FromBencode for base::Node {
-    fn from_bencode(b: &bencode::Bencode) -> Option<base::Node> {
+    fn from_bencode(b: &Bencode) -> Option<base::Node> {
         match *b {
-            bencode::ByteString(ref v) if v.len() == 26 => Some(base::Node {
+            Bencode::ByteString(ref v) if v.len() == 26 => Some(base::Node {
                 id: id_from_netbytes(v.slice(0, 20)),
                 address: utils::netaddr_from_netbytes(v.slice(20, 26))
             }),
@@ -124,27 +124,27 @@ fn dict_with_sender(dict: &PayloadDict, maybe_sender: &Option<base::Node>)
     if let Some(ref sender) = *maybe_sender {
         d.insert(key(SENDER), sender.to_bencode());
     }
-    bencode::Dict(d)
+    Bencode::Dict(d)
 }
 
 impl ToBencode for Package {
-    fn to_bencode(&self) -> bencode::Bencode {
-        let mut result: bencode::DictMap = collections::TreeMap::new();
+    fn to_bencode(&self) -> Bencode {
+        let mut result = collections::TreeMap::new();
 
         result.insert(key(TR_ID),
-                      bencode::ByteString(self.transaction_id.clone()));
+                      Bencode::ByteString(self.transaction_id.clone()));
         let (typ, payload) = match self.payload {
-            Query(ref d) => (QUERY, dict_with_sender(d, &self.sender)),
-            Response(ref d) => (RESPONSE, dict_with_sender(d, &self.sender)),
-            Error(code, ref s) => {
+            Payload::Query(ref d) => (QUERY, dict_with_sender(d, &self.sender)),
+            Payload::Response(ref d) => (RESPONSE, dict_with_sender(d, &self.sender)),
+            Payload::Error(code, ref s) => {
                 let l = vec![code.to_bencode(), s.to_bencode()];
-                (ERROR, bencode::List(l))
+                (ERROR, Bencode::List(l))
             }
         };
         result.insert(key(TYPE), typ.to_string().to_bencode());
         result.insert(key(typ), payload);
 
-        bencode::Dict(result)
+        Bencode::Dict(result)
     }
 }
 
@@ -158,7 +158,7 @@ macro_rules! debug_and_return(
 macro_rules! bytes_or_none(
     ($dict:ident, $key:expr, $msg:expr) => (
         match $dict.get(&key($key)) {
-            Some(&bencode::ByteString(ref val)) => val,
+            Some(&Bencode::ByteString(ref val)) => val,
             _ => debug_and_return!($msg)
         }
     )
@@ -182,9 +182,9 @@ macro_rules! extract_sender(
 )
 
 impl FromBencode for Package {
-    fn from_bencode(b: &bencode::Bencode) -> Option<Package> {
+    fn from_bencode(b: &Bencode) -> Option<Package> {
         let dict = match *b {
-            bencode::Dict(ref d) => d,
+            Bencode::Dict(ref d) => d,
             _ => debug_and_return!("Expected dict as top-level package, got {}", b)
         };
 
@@ -196,8 +196,8 @@ impl FromBencode for Package {
 
         let (payload, sender) = match typ.container_as_str() {
             Some(ERROR) => match *payload_data {
-                bencode::List(ref v) => match v.as_slice() {
-                    [bencode::Number(code), bencode::ByteString(ref msg)] => {
+                Bencode::List(ref v) => match v.as_slice() {
+                    [Bencode::Number(code), Bencode::ByteString(ref msg)] => {
                         let str_msg = match msg.container_as_str() {
                             Some(s) => s,
                             None => {
@@ -205,7 +205,7 @@ impl FromBencode for Package {
                                 "Unknown error"
                             }
                         };
-                        (Error(code, str_msg.to_string()), None)
+                        (Payload::Error(code, str_msg.to_string()), None)
                     },
                     _ => debug_and_return!(
                         "Error body of unknown structure {}", v)
@@ -214,14 +214,14 @@ impl FromBencode for Package {
                                        payload_data)
             },
             Some(QUERY) => match *payload_data {
-                bencode::Dict(ref d) =>
-                    extract_sender!(d, Query, "No sender ID in query"),
+                Bencode::Dict(ref d) =>
+                    extract_sender!(d, Payload::Query, "No sender ID in query"),
                 _ => debug_and_return!("Query body of unexpected type: {}",
                                        payload_data)
             },
             Some(RESPONSE) => match *payload_data {
-                bencode::Dict(ref d) =>
-                    extract_sender!(d, Response, "No sender ID in response"),
+                Bencode::Dict(ref d) =>
+                    extract_sender!(d, Payload::Response, "No sender ID in response"),
                 _ => debug_and_return!("Response body of unexpected type: {}",
                                        payload_data)
             },
@@ -245,7 +245,7 @@ impl FromBencode for Package {
 mod test {
     use std::collections;
 
-    use bencode::{mod, FromBencode, ToBencode};
+    use bencode::{mod, Bencode, FromBencode, ToBencode};
     use bencode::util::ByteString;
 
     use super::super::super::base;
@@ -253,14 +253,11 @@ mod test {
 
     use super::key;
     use super::PayloadDict;
-    use super::Error;
     use super::Package;
     use super::Payload;
-    use super::Query;
-    use super::Response;
 
 
-    const FAKE_TR_ID: &'static [u8] = [1, 2, 254, 255];
+    const FAKE_TR_ID: [u8, ..4] = [1, 2, 254, 255];
 
     fn new_package(payload: Payload) -> Package {
         Package {
@@ -270,12 +267,12 @@ mod test {
         }
     }
 
-    fn common<'a>(b: &'a bencode::Bencode, typ: &str) -> &'a bencode::DictMap {
+    fn common<'a>(b: &'a Bencode, typ: &str) -> &'a bencode::DictMap {
         match *b {
-            bencode::Dict(ref d) => {
+            Bencode::Dict(ref d) => {
                 let tt_val = &d[key("tt")];
                 match *tt_val {
-                    bencode::ByteString(ref v) => {
+                    Bencode::ByteString(ref v) => {
                         assert_eq!(vec![1, 2, 254, 255], *v);
                     },
                     _ => panic!("unexpected {}", tt_val)
@@ -283,7 +280,7 @@ mod test {
 
                 let y_val = &d[key("y")];
                 match *y_val {
-                    bencode::ByteString(ref v) => {
+                    Bencode::ByteString(ref v) => {
                         assert_eq!(typ.as_bytes(), v.as_slice());
                     },
                     _ => panic!("unexpected {}", y_val)
@@ -295,44 +292,44 @@ mod test {
         }
     }
 
-    fn dict<'a>(b: &'a bencode::Bencode, typ: &str) -> &'a bencode::DictMap {
+    fn dict<'a>(b: &'a Bencode, typ: &str) -> &'a bencode::DictMap {
         let d = common(b, typ);
 
         let typ_val = &d[key(typ)];
         match *typ_val {
-            bencode::Dict(ref m) => m,
+            Bencode::Dict(ref m) => m,
             _ => panic!("unexpected {}", typ_val)
         }
     }
 
-    fn list<'a>(b: &'a bencode::Bencode, typ: &str) -> &'a bencode::ListVec {
+    fn list<'a>(b: &'a Bencode, typ: &str) -> &'a bencode::ListVec {
         let d = common(b, typ);
 
         let typ_val = &d[key(typ)];
         match *typ_val {
-            bencode::List(ref l) => l,
+            Bencode::List(ref l) => l,
             _ => panic!("unexpected {}", typ_val)
         }
     }
 
     #[test]
     fn test_error_to_bencode() {
-        let p = new_package(Error(10, "error".to_string()));
+        let p = new_package(Payload::Error(10, "error".to_string()));
         let enc = p.to_bencode();
         let l = list(&enc, "e");
-        assert_eq!(vec![bencode::Number(10),
+        assert_eq!(vec![Bencode::Number(10),
                         "error".to_string().to_bencode()],
                    *l);
     }
 
     #[test]
     fn test_error_to_from_bencode() {
-        let p = new_package(Error(10, "error".to_string()));
+        let p = new_package(Payload::Error(10, "error".to_string()));
         let enc = p.to_bencode();
         let p2: Package = FromBencode::from_bencode(&enc).unwrap();
         assert_eq!(FAKE_TR_ID, p2.transaction_id.as_slice());
         assert!(p2.sender.is_none());
-        if let Error(code, msg) = p2.payload {
+        if let Payload::Error(code, msg) = p2.payload {
             assert_eq!(10, code);
             assert_eq!("error", msg.as_slice());
         }
@@ -344,7 +341,7 @@ mod test {
     #[test]
     fn test_query_to_bencode() {
         let payload: PayloadDict = collections::TreeMap::new();
-        let p = new_package(Query(payload.clone()));
+        let p = new_package(Payload::Query(payload.clone()));
         let enc = p.to_bencode();
         let d = dict(&enc, "q");
         assert_eq!(1, d.len());
@@ -355,14 +352,14 @@ mod test {
     fn test_query_to_from_bencode() {
         let mut payload: PayloadDict = collections::TreeMap::new();
         payload.insert(key("test"), "ok".to_string().to_bencode());
-        let p = new_package(Query(payload));
+        let p = new_package(Payload::Query(payload));
         let enc = p.to_bencode();
         let p2: Package = FromBencode::from_bencode(&enc).unwrap();
         assert_eq!(FAKE_TR_ID, p2.transaction_id.as_slice());
         assert_eq!(test::uint_to_id(42), p2.sender.unwrap().id);
-        if let Query(d) = p2.payload {
+        if let Payload::Query(d) = p2.payload {
             assert_eq!(1, d.len());
-            assert_eq!(bencode::ByteString(vec![111, 107]),
+            assert_eq!(Bencode::ByteString(vec![111, 107]),
                        d[key("test")]);
         }
         else {
@@ -373,7 +370,7 @@ mod test {
     #[test]
     fn test_response_to_bencode() {
         let payload: PayloadDict = collections::TreeMap::new();
-        let p = new_package(Response(payload));
+        let p = new_package(Payload::Response(payload));
         let enc = p.to_bencode();
         let d = dict(&enc, "r");
         assert_eq!(1, d.len());
@@ -384,14 +381,14 @@ mod test {
     fn test_response_to_from_bencode() {
         let mut payload: PayloadDict = collections::TreeMap::new();
         payload.insert(key("test"), "ok".to_string().to_bencode());
-        let p = new_package(Response(payload));
+        let p = new_package(Payload::Response(payload));
         let enc = p.to_bencode();
         let p2: Package = FromBencode::from_bencode(&enc).unwrap();
         assert_eq!(FAKE_TR_ID, p2.transaction_id.as_slice());
         assert_eq!(test::uint_to_id(42), p2.sender.unwrap().id);
-        if let Response(d) = p2.payload {
+        if let Payload::Response(d) = p2.payload {
             assert_eq!(1, d.len());
-            assert_eq!(bencode::ByteString(vec![111, 107]),
+            assert_eq!(Bencode::ByteString(vec![111, 107]),
                        d[key("test")]);
         }
         else {
@@ -404,14 +401,14 @@ mod test {
         let id = test::uint_to_id(0x0A0B0C0D);
         let b = super::id_to_netbytes(&id);
         let mut expected = Vec::from_elem(16, 0u8);
-        expected.push_all([0x0A, 0x0b, 0x0C, 0x0D]);
+        expected.push_all(&[0x0A, 0x0b, 0x0C, 0x0D]);
         assert_eq!(expected, b);
     }
 
     #[test]
     fn test_id_from_netbytes() {
         let mut bytes = Vec::from_elem(16, 0u8);
-        bytes.push_all([0x0A, 0x0b, 0x0C, 0x0D]);
+        bytes.push_all(&[0x0A, 0x0b, 0x0C, 0x0D]);
         let expected = test::uint_to_id(0x0A0B0C0D);
         let id = super::id_from_netbytes(bytes.as_slice());
         assert_eq!(expected, id);
@@ -422,16 +419,16 @@ mod test {
         let n = test::new_node(42);
         let enc = n.to_bencode();
         let mut expected = Vec::from_elem(19, 0u8);
-        expected.push_all([42, 127, 0, 0, 1, 31, 72]);
-        assert_eq!(bencode::ByteString(expected), enc);
+        expected.push_all(&[42, 127, 0, 0, 1, 31, 72]);
+        assert_eq!(Bencode::ByteString(expected), enc);
     }
 
     #[test]
     fn test_node_from_bencode() {
         let mut b = Vec::from_elem(19, 0u8);
-        b.push_all([42, 127, 0, 0, 1, 0, 80]);
+        b.push_all(&[42, 127, 0, 0, 1, 0, 80]);
         let n: base::Node =
-            FromBencode::from_bencode(&bencode::ByteString(b)).unwrap();
+            FromBencode::from_bencode(&Bencode::ByteString(b)).unwrap();
         assert_eq!(n.id, test::uint_to_id(42));
         assert_eq!(n.address.to_string().as_slice(), "127.0.0.1:80");
     }
@@ -439,7 +436,7 @@ mod test {
     #[test]
     fn test_node_from_bencode_none() {
         let n: Option<base::Node> =
-            FromBencode::from_bencode(&bencode::Number(42));
+            FromBencode::from_bencode(&Bencode::Number(42));
         assert!(n.is_none());
     }
 

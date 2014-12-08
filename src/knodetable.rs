@@ -186,9 +186,9 @@ mod test {
 
     fn assert_node_list_eq(expected: &[&Node], actual: &Vec<Node>) {
         let act: Vec<num::BigUint> = actual.iter()
-            .map(|x| x.id.clone()).collect();
+            .map(|n| n.id.clone()).collect();
         let exp: Vec<num::BigUint> = expected.iter()
-            .map(|x| x.id.clone()).collect();
+            .map(|n| n.id.clone()).collect();
         assert_eq!(exp, act);
     }
 
@@ -234,7 +234,7 @@ mod test {
         };
         // 0 xor 3 = 3, 1 xor 3 = 2, 2 xor 3 = 1
         let id = test::uint_to_id(3);
-        assert_node_list_eq([&n.buckets[1].data[2]],
+        assert_node_list_eq(&[&n.buckets[1].data[2]],
                             &n.find(&id, 1));
     }
 
@@ -297,8 +297,8 @@ mod test {
         // Nodes with ID's 0, 1, 2; assume our ID is also 2 (impossible IRL)
         let id = test::uint_to_id(2);
         // 0 xor 2 = 2, 1 xor 2 = 3, 2 xor 2 = 0
-        assert_node_list_eq([&b.data[2]], &b.find(&id, 1));
-        assert_node_list_eq([&b.data[2], &b.data[0]], &b.find(&id, 2));
+        assert_node_list_eq(&[&b.data[2]], &b.find(&id, 1));
+        assert_node_list_eq(&[&b.data[2], &b.data[0]], &b.find(&id, 2));
     }
 
     #[test]
@@ -307,7 +307,7 @@ mod test {
         // Nodes with ID's 0, 1, 2; assume our ID is also 2 (impossible IRL)
         let id = test::uint_to_id(2);
         // 0 xor 2 = 2, 1 xor 2 = 3, 2 xor 2 = 0
-        assert_node_list_eq([&b.data[2], &b.data[0], &b.data[1]],
+        assert_node_list_eq(&[&b.data[2], &b.data[0], &b.data[1]],
                             &b.find(&id, 100));
     }
 }

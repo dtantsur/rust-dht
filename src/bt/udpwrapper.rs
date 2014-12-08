@@ -58,7 +58,7 @@ impl GenericSocketWrapper for UdpSocketWrapper {
     fn receive(&mut self) -> IoResult<(protocol::Package, ip::SocketAddr)> {
         let mut buf = [0u8, ..1600];  // TODO(dtantsur): better number?
 
-        let (amt, src) = try!(self.socket.recv_from(buf));
+        let (amt, src) = try!(self.socket.recv_from(&mut buf));
         let benc = try!(bencode::from_buffer(buf.slice(0, amt)).map_err(|e| {
             io::IoError {
                 kind: io::InvalidInput,
@@ -100,7 +100,7 @@ mod test {
     #[test]
     fn test_new_send() {
         let n = test::new_node(42);
-        let p = new_package(protocol::Error(1, "".to_string()));
+        let p = new_package(protocol::Payload::Error(1, "".to_string()));
         let mut sock = super::UdpSocketWrapper::new(&n).unwrap();
         sock.send(&p, &test::new_node(1)).unwrap();
     }

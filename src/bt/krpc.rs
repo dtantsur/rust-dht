@@ -184,8 +184,7 @@ mod test {
         assert_eq!(n.id, s.this_node.id);
         let mut nt = s.node_table_lock().write();
         nt.update(&test::new_node(1));
-        let nt2 = nt.downgrade();
-        assert_eq!(nt2.random_id().to_u8().unwrap(), 42);
+        assert_eq!(nt.random_id().to_u8().unwrap(), 42);
     }
 
     #[test]

@@ -20,7 +20,6 @@
 #![crate_type = "lib"]
 #![unstable]
 
-#![feature(if_let)]
 #![feature(macro_rules)]
 #![feature(phase)]
 #![feature(unsafe_destructor)]
@@ -28,7 +27,6 @@
 extern crate bencode;
 extern crate num;
 extern crate serialize;
-extern crate sync;
 #[phase(plugin, link)]
 extern crate log;
 
