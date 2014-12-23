@@ -66,11 +66,11 @@ fn id_to_netbytes(id: &num::BigUint) -> Vec<u8> {
     assert!(id.bits() <= ID_BYTE_SIZE * 8);
 
     let mut id_c = id.clone();
-    let mask = FromPrimitive::from_u8(0xFF).unwrap();
+    let mask: num::BigUint = FromPrimitive::from_u8(0xFF).unwrap();
     let mut result = Vec::from_elem(ID_BYTE_SIZE, 0);
 
     for i in result.iter_mut().rev() {
-        let part = id_c & mask;
+        let part: num::BigUint = &id_c & &mask;
         *i = part.to_u8().unwrap();
         id_c = id_c >> 8;
     }
@@ -129,7 +129,7 @@ fn dict_with_sender(dict: &PayloadDict, maybe_sender: &Option<base::Node>)
 
 impl ToBencode for Package {
     fn to_bencode(&self) -> Bencode {
-        let mut result = collections::TreeMap::new();
+        let mut result = collections::BTreeMap::new();
 
         result.insert(key(TR_ID),
                       Bencode::ByteString(self.transaction_id.clone()));
@@ -153,7 +153,7 @@ macro_rules! debug_and_return(
         debug!($( $arg ),*);
         return None;
     })
-)
+);
 
 macro_rules! bytes_or_none(
     ($dict:ident, $key:expr, $msg:expr) => (
@@ -162,7 +162,7 @@ macro_rules! bytes_or_none(
             _ => debug_and_return!($msg)
         }
     )
-)
+);
 
 macro_rules! extract_sender(
     ($dict:ident, $ty:expr, $msg:expr) => ({
@@ -179,7 +179,7 @@ macro_rules! extract_sender(
             debug_and_return!($msg);
         }
     })
-)
+);
 
 impl FromBencode for Package {
     fn from_bencode(b: &Bencode) -> Option<Package> {
@@ -340,7 +340,7 @@ mod test {
 
     #[test]
     fn test_query_to_bencode() {
-        let payload: PayloadDict = collections::TreeMap::new();
+        let payload: PayloadDict = collections::BTreeMap::new();
         let p = new_package(Payload::Query(payload.clone()));
         let enc = p.to_bencode();
         let d = dict(&enc, "q");
@@ -350,7 +350,7 @@ mod test {
 
     #[test]
     fn test_query_to_from_bencode() {
-        let mut payload: PayloadDict = collections::TreeMap::new();
+        let mut payload: PayloadDict = collections::BTreeMap::new();
         payload.insert(key("test"), "ok".to_string().to_bencode());
         let p = new_package(Payload::Query(payload));
         let enc = p.to_bencode();
@@ -369,7 +369,7 @@ mod test {
 
     #[test]
     fn test_response_to_bencode() {
-        let payload: PayloadDict = collections::TreeMap::new();
+        let payload: PayloadDict = collections::BTreeMap::new();
         let p = new_package(Payload::Response(payload));
         let enc = p.to_bencode();
         let d = dict(&enc, "r");
@@ -379,7 +379,7 @@ mod test {
 
     #[test]
     fn test_response_to_from_bencode() {
-        let mut payload: PayloadDict = collections::TreeMap::new();
+        let mut payload: PayloadDict = collections::BTreeMap::new();
         payload.insert(key("test"), "ok".to_string().to_bencode());
         let p = new_package(Payload::Response(payload));
         let enc = p.to_bencode();

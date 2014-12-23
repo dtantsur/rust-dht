@@ -100,7 +100,7 @@ impl GenericNodeTable for KNodeTable {
 
     fn find(&self, id: &num::BigUint, count: uint) -> Vec<Node> {
         debug_assert!(count > 0);
-        assert!(*id != self.this_id)
+        assert!(*id != self.this_id);
         let bucket = self.bucket_number(id);
         self.buckets[bucket].find(id, count)
     }
@@ -117,7 +117,7 @@ impl GenericNodeTable for KNodeTable {
 
 impl KBucket {
     pub fn new(k: uint) -> KBucket {
-        assert!(k > 0)
+        assert!(k > 0);
         KBucket {
             data: Vec::new(),
             size: k
@@ -142,7 +142,7 @@ impl KBucket {
     }
 
     pub fn find(&self, id: &num::BigUint, count: uint) -> Vec<Node> {
-        let sort_fn = |a: &Node, b: &Node| {
+        let sort_fn = |&: a: &Node, b: &Node| {
             KNodeTable::distance(id, &a.id)
                 .cmp(&KNodeTable::distance(id, &b.id))
         };
@@ -270,7 +270,7 @@ mod test {
     fn test_kbucket_update_unknown() {
         let mut b = prepare(1);
         let node = test::new_node(42);
-        assert!(b.update(&node))
+        assert!(b.update(&node));
         assert_eq!(2, b.data.len());
         assert_eq!(node.id, b.data[1].id);
     }
@@ -279,7 +279,7 @@ mod test {
     fn test_kbucket_update_known() {
         let mut b = prepare(2);
         let node = test::new_node(0);
-        assert!(b.update(&node))
+        assert!(b.update(&node));
         assert_eq!(2, b.data.len());
         assert_eq!(node.id, b.data[1].id);
     }

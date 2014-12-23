@@ -10,7 +10,7 @@ license = "Apache-2.0/MIT"
 
 [dependencies.num]
 
-num = "~0.1.2"
+num = "~0.1.3"
 
 [dependencies.bencode]
 

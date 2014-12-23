@@ -84,7 +84,7 @@ KRpcService<TNodeTable, TSocket> {
         };
 
         let self_clone = self_.clone();
-        spawn(proc() handle_incoming(self_clone));
+        spawn(move || handle_incoming(self_clone));
 
         Ok(self_)
     }
