@@ -2,19 +2,16 @@
 
 name = "dht"
 description = "Implementation of Kademlia-based DHT in Rust"
-version = "0.0.1"
+version = "0.0.0"
 authors = ["Dmitry Tantsur <divius.inside@gmail.com>"]
 homepage = "https://github.com/Divius/rust-dht"
 readme = "README.md"
 license = "Apache-2.0/MIT"
 
-[dependencies.num]
+[dependencies]
 
 num = "~0.1.3"
-
-[dependencies.bencode]
-
-git = "https://github.com/arjantop/rust-bencode"
+bencode = "~0.1.0"
 
 [lib]
 
