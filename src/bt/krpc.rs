@@ -12,6 +12,7 @@
 
 use std::io::IoResult;
 use std::sync;
+use std::thread;
 
 use super::super::base;
 use super::super::knodetable;
@@ -84,7 +85,7 @@ KRpcService<TNodeTable, TSocket> {
         };
 
         let self_clone = self_.clone();
-        spawn(move || handle_incoming(self_clone));
+        thread::Thread::spawn(move || handle_incoming(self_clone)).detach();
 
         Ok(self_)
     }
