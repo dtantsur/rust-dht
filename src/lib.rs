@@ -26,9 +26,9 @@
 
 extern crate bencode;
 extern crate num;
-extern crate serialize;
 #[phase(plugin, link)]
 extern crate log;
+extern crate "rustc-serialize" as rustc_serialize;
 
 pub use base::GenericNodeTable;
 pub use base::Node;

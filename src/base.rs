@@ -11,7 +11,7 @@ use std::str::FromStr;
 use std::io::net::ip;
 
 use num;
-use serialize;
+use rustc_serialize as serialize;
 
 
 /// Trait representing table with known nodes.
@@ -95,14 +95,14 @@ impl<E, D:serialize::Decoder<E>> serialize::Decodable<D, E> for Node {
 
 #[cfg(test)]
 mod test {
-    use serialize::json;
+    use rustc_serialize::json;
 
     use super::Node;
 
     use super::super::utils::test;
 
 
-    #[deriving(Show, Clone, Encodable, Decodable)]
+    #[deriving(Show, Clone, RustcEncodable, RustcDecodable)]
     struct SimplifiedNode {
         address: String,
         id: String
