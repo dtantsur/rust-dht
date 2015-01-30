@@ -8,7 +8,12 @@
 //
 
 use std::str::FromStr;
+use num::bigint::RandBigInt;
 use std::old_io::net::ip;
+use std::old_io::IoResult;
+use std::ops::BitXor;
+use std::fmt;
+use std::rand;
 
 use num;
 use rustc_serialize as serialize;
@@ -18,14 +23,16 @@ use rustc_serialize as serialize;
 ///
 /// Keeps some reasonable subset of known nodes passed to `update`.
 pub trait GenericNodeTable : Send + Sync {
+    type P : Peer;
     /// Generate suitable random ID.
-    fn random_id(&self) -> num::BigUint;
+    #[experimental]
+    fn random_id(&self) -> <Self::P as Peer>::Key;
     /// Store or update node in the table.
-    fn update(&mut self, node: &Node) -> bool;
+    fn update(&mut self, node: &Self::P) -> bool;
     /// Find given number of node, closest to given ID.
-    fn find(&self, id: &num::BigUint, count: usize) -> Vec<Node>;
+    fn find(&self, id: &<Self::P as Peer>::Key, count: usize) -> Vec<Self::P>;
     /// Pop expired or the oldest nodes from table for inspection.
-    fn pop_oldest(&mut self) -> Vec<Node>;
+    fn pop_oldest(&mut self) -> Vec<Self::P>;
 }
 
 /// Structure representing a node in system.
@@ -37,7 +44,38 @@ pub struct Node {
     /// Network address of the node.
     pub address: ip::SocketAddr,
     /// ID of the node.
-    pub id: num::BigUint
+    pub id: num::BigUint,
+}
+
+pub trait Peer : ip::ToSocketAddr + Send + Sync + fmt::Debug + Clone {
+    type Key : Eq + Send + Sync + fmt::Debug;
+    fn get_key<'a> (&self) -> &Self::Key; // TODO change it to return &Key (lot of useless clone in impls
+    fn key_as_buint<'a>(&'a Self::Key) -> &'a num::BigUint;
+    fn random_id(usize) -> Self::Key; // TODO usize in peer trait
+}
+
+impl ip::ToSocketAddr for Node {
+    #[inline]
+    fn to_socket_addr(&self) -> IoResult<ip::SocketAddr>{
+        Ok(self.address)
+    }
+}
+
+impl Peer for Node {
+    type Key = num::BigUint;
+    #[inline]
+    fn get_key<'a> (&'a self) -> &'a num::BigUint {
+        &self.id
+    }
+    #[inline]
+    fn key_as_buint<'a>(k : &'a num::BigUint) -> &'a num::BigUint {
+        k
+    }
+    #[inline]
+    fn random_id(hash_size : usize) -> num::BigUint {
+        let mut rng = rand::thread_rng();
+        rng.gen_biguint(hash_size)
+    }
 }
 
 impl serialize::Encodable for Node {
