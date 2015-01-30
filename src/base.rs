@@ -8,7 +8,7 @@
 //
 
 use std::str::FromStr;
-use std::io::net::ip;
+use std::old_io::net::ip;
 
 use num;
 use rustc_serialize as serialize;
@@ -25,7 +25,7 @@ pub trait GenericNodeTable : Send + Sync {
     /// Store or update node in the table.
     fn update(&mut self, node: &Node) -> bool;
     /// Find given number of node, closest to given ID.
-    fn find(&self, id: &num::BigUint, count: uint) -> Vec<Node>;
+    fn find(&self, id: &num::BigUint, count: usize) -> Vec<Node>;
     /// Pop expired or the oldest nodes from table for inspection.
     fn pop_oldest(&mut self) -> Vec<Node>;
 }
@@ -34,7 +34,7 @@ pub trait GenericNodeTable : Send + Sync {
 ///
 /// Every node has an address (IP and port) and a numeric ID, which is
 /// used to calculate metrics and look up data.
-#[deriving(Clone, Show)]
+#[derive(Clone, Debug)]
 #[unstable]
 pub struct Node {
     /// Network address of the node.
@@ -43,9 +43,8 @@ pub struct Node {
     pub id: num::BigUint
 }
 
-
-impl<E, S:serialize::Encoder<E>> serialize::Encodable<S, E> for Node {
-    fn encode(&self, s: &mut S) -> Result<(), E> {
+impl serialize::Encodable for Node {
+    fn encode<S:serialize::Encoder> (&self, s: &mut S) -> Result<(), S::Error> {
         s.emit_struct("Node", 2, |s| {
             try!(s.emit_struct_field("address", 0, |s2| {
                 let addr = format!("{}", self.address);
@@ -62,8 +61,8 @@ impl<E, S:serialize::Encoder<E>> serialize::Encodable<S, E> for Node {
     }
 }
 
-impl<E, D:serialize::Decoder<E>> serialize::Decodable<D, E> for Node {
-    fn decode(d: &mut D) -> Result<Node, E> {
+impl serialize::Decodable for Node {
+    fn decode<D:serialize::Decoder> (d : &mut D) -> Result<Node, D::Error> {
         d.read_struct("Node", 2, |d| {
             let addr = try!(d.read_struct_field("address", 0, |d2| {
                 let s = try!(d2.read_str());
@@ -96,13 +95,14 @@ impl<E, D:serialize::Decoder<E>> serialize::Decodable<D, E> for Node {
 #[cfg(test)]
 mod test {
     use rustc_serialize::json;
+    use std::num::ToPrimitive;
 
     use super::Node;
 
     use super::super::utils::test;
 
 
-    #[deriving(Show, Clone, RustcEncodable, RustcDecodable)]
+    #[derive(Debug, Clone, RustcEncodable, RustcDecodable)]
     struct SimplifiedNode {
         address: String,
         id: String
@@ -112,7 +112,7 @@ mod test {
     fn test_node_encode() {
         let n = test::new_node(42);
         let j = json::encode(&n);
-        let m: SimplifiedNode = json::decode(j.as_slice()).unwrap();
+        let m: SimplifiedNode = json::decode(j.unwrap().as_slice()).unwrap();
         assert_eq!(test::ADDR, m.address.as_slice());
         assert_eq!("42", m.id.as_slice());
     }
@@ -124,7 +124,7 @@ mod test {
             id: "42".to_string()
         };
         let j = json::encode(&sn);
-        let n: Node = json::decode(j.as_slice()).unwrap();
+        let n: Node = json::decode(j.unwrap().as_slice()).unwrap();
         assert_eq!(42, n.id.to_uint().unwrap());
     }
 
@@ -135,7 +135,7 @@ mod test {
             id: "42".to_string()
         };
         let j = json::encode(&sn);
-        assert!(json::decode::<Node>(j.as_slice()).is_err());
+        assert!(json::decode::<Node>(j.unwrap().as_slice()).is_err());
     }
 
     #[test]
@@ -145,14 +145,14 @@ mod test {
             id: "x42".to_string()
         };
         let j = json::encode(&sn);
-        assert!(json::decode::<Node>(j.as_slice()).is_err());
+        assert!(json::decode::<Node>(j.unwrap().as_slice()).is_err());
     }
 
     #[test]
     fn test_node_encode_decode() {
         let n = test::new_node(42);
         let j = json::encode(&n);
-        let n2 = json::decode::<Node>(j.as_slice()).unwrap();
+        let n2 = json::decode::<Node>(j.unwrap().as_slice()).unwrap();
         assert_eq!(n.id, n2.id);
         assert_eq!(n.address, n2.address);
     }

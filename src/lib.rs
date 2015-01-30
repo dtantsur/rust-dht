@@ -20,13 +20,11 @@
 #![crate_type = "lib"]
 #![unstable]
 
-#![feature(macro_rules)]
-#![feature(phase)]
 #![feature(unsafe_destructor)]
 
 extern crate bencode;
 extern crate num;
-#[phase(plugin, link)]
+#[macro_use]
 extern crate log;
 extern crate "rustc-serialize" as rustc_serialize;
 

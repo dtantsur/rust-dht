@@ -9,11 +9,11 @@
 
 //! UDP socket wrapper.
 
-use std::io::{mod, IoResult};
-use std::io::net::ip;
-use std::io::net::udp;
+use std::old_io::{self, IoResult};
+use std::old_io::net::ip;
+use std::old_io::net::udp;
 
-use bencode::{mod, FromBencode, ToBencode};
+use bencode::{self, FromBencode, ToBencode};
 
 use super::super::base;
 use super::protocol;
@@ -29,7 +29,7 @@ pub trait GenericSocketWrapper : Send + Clone {
 }
 
 /// Wrapper around UDP socket with converting to/from Package.
-#[deriving(Clone)]
+#[derive(Clone)]
 pub struct UdpSocketWrapper {
     socket: udp::UdpSocket,
 }
@@ -56,20 +56,20 @@ impl GenericSocketWrapper for UdpSocketWrapper {
 
     /// Receive package.
     fn receive(&mut self) -> IoResult<(protocol::Package, ip::SocketAddr)> {
-        let mut buf = [0u8, ..1600];  // TODO(dtantsur): better number?
+        let mut buf = [0u8; 1600];  // TODO(dtantsur): better number?
 
         let (amt, src) = try!(self.socket.recv_from(&mut buf));
         let benc = try!(bencode::from_buffer(buf.slice(0, amt)).map_err(|e| {
-            io::IoError {
-                kind: io::InvalidInput,
+            old_io::IoError {
+                kind: old_io::InvalidInput,
                 desc: "Cannot read bencoded buffer",
                 detail: Some(format!("Cannot read bencoded buffer: {}", e.msg))
             }
         }));
 
         let pkg = try!(FromBencode::from_bencode(&benc).ok_or_else(|| {
-            io::IoError {
-                kind: io::InvalidInput,
+            old_io::IoError {
+                kind: old_io::InvalidInput,
                 desc: "Cannot decode bencoded buffer",
                 detail: None
             }

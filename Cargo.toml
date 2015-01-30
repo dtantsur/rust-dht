@@ -10,10 +10,10 @@ license = "Apache-2.0/MIT"
 
 [dependencies]
 
-bencode = "~0.1.0"
-log = "~0.1.0"
-num = "~0.1.3"
-rustc-serialize = "~0.2.4"
+bencode = "~0.1.6"
+log = "~0.2.1"
+num = "~0.1.10"
+rustc-serialize = "~0.2.10"
 
 [lib]
 

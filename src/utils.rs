@@ -1,6 +1,7 @@
 //! Various utilities
 
-use std::io::net::ip;
+use std::old_io::net::ip;
+use std::num::FromPrimitive;
 
 
 /// Convert socket address to bytes in network order.
@@ -18,14 +19,14 @@ pub fn netaddr_from_netbytes(bytes: &[u8]) -> ip::SocketAddr {
     assert_eq!(6, bytes.len());
     ip::SocketAddr {
         ip: ip::Ipv4Addr(bytes[0], bytes[1], bytes[2], bytes[3]),
-        port: (bytes[4] as u16 << 8) + bytes[5] as u16
+        port: ((bytes[4] as u16) << 8) + bytes[5] as u16
     }
 }
 
 
 #[cfg(test)]
 pub mod test {
-    use std::io::net::ip;
+    use std::old_io::net::ip;
     use std::num::FromPrimitive;
 
     use num;
@@ -35,11 +36,11 @@ pub mod test {
 
     pub static ADDR: &'static str = "127.0.0.1:8008";
 
-    pub fn new_node(id: uint) -> Node {
+    pub fn new_node(id: usize) -> Node {
         new_node_with_port(id, 8008)
     }
 
-    pub fn new_node_with_port(id: uint, port: u16) -> Node {
+    pub fn new_node_with_port(id: usize, port: u16) -> Node {
         Node {
             id: FromPrimitive::from_uint(id).unwrap(),
             address: ip::SocketAddr {
@@ -49,7 +50,7 @@ pub mod test {
         }
     }
 
-    pub fn uint_to_id(id: uint) -> num::BigUint {
+    pub fn usize_to_id(id: usize) -> num::BigUint {
         FromPrimitive::from_uint(id).unwrap()
     }
 }
