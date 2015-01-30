@@ -13,6 +13,7 @@
 use std::old_io::IoResult;
 use std::sync;
 use std::thread;
+use std::num::ToPrimitive;
 
 use super::super::base;
 use super::super::knodetable;
@@ -38,7 +39,7 @@ pub struct KRpcService<TNodeTable: base::GenericNodeTable,
 }
 
 /// Default kind of KRpc service.
-pub type DefaultKRpcService = KRpcService<knodetable::KNodeTable, udpwrapper::UdpSocketWrapper>;
+pub type DefaultKRpcService = KRpcService<knodetable::KNodeTable<base::Node>, udpwrapper::UdpSocketWrapper>;
 
 
 // This can't be derived, compiler is confused because of Arc.
@@ -62,7 +63,7 @@ fn handle_incoming<TNodeTable: base::GenericNodeTable,
     // TODO(divius): implement
 }
 
-impl KRpcService<knodetable::KNodeTable, udpwrapper::UdpSocketWrapper> {
+impl KRpcService<knodetable::KNodeTable<base::Node>, udpwrapper::UdpSocketWrapper> {
     /// New service with default node table.
     pub fn new_default(this_node: base::Node) -> IoResult<DefaultKRpcService> {
         let node_table = knodetable::KNodeTable::new(this_node.id.clone());
@@ -134,6 +135,9 @@ mod test {
     }
 
     impl GenericNodeTable for DummyNodeTable {
+
+        type P = base::Node;
+
         fn random_id(&self) -> num::BigUint {
             // This number is random, I promise :)
             test::usize_to_id(42)
