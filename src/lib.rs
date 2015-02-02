@@ -30,6 +30,7 @@ extern crate "rustc-serialize" as rustc_serialize;
 
 pub use base::GenericNodeTable;
 pub use base::Node;
+pub use base::Peer;
 pub use knodetable::KNodeTable;
 
 #[unstable]
@@ -37,6 +38,6 @@ mod base;
 #[experimental]
 pub mod bt;
 #[unstable]
-mod knodetable;
+pub mod knodetable;
 
 mod utils;
