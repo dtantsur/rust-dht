@@ -13,6 +13,7 @@ license = "Apache-2.0/MIT"
 bencode = "~0.1.7"
 log = "~0.2.1"
 num = "~0.1.10"
+rand = "~0.1.2"
 rustc-serialize = "~0.2.10"
 
 [lib]

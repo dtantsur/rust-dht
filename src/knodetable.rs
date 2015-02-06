@@ -15,13 +15,12 @@
 //! using `pop_oldest` call.
 
 use std::cmp;
-use num::Zero;
-use std::rand;
+use std::ops::BitXor;
 
 use num;
+use num::Zero;
 use num::bigint::RandBigInt;
-use std::num::ToPrimitive;
-use std::ops::BitXor;
+use std::rand;  // FIXME: drop std:: once num 0.1.13 is released
 
 use super::GenericNodeTable;
 use super::Node;
@@ -147,7 +146,7 @@ impl KBucket {
         };
         let mut data_copy = self.data.clone();
         data_copy.sort_by(sort_fn);
-        data_copy.slice(0, cmp::min(count, data_copy.len())).to_vec()
+        data_copy[0..cmp::min(count, data_copy.len())].to_vec()
     }
 
     fn update_position(&mut self, node: Node) {

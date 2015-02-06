@@ -59,7 +59,7 @@ impl GenericSocketWrapper for UdpSocketWrapper {
         let mut buf = [0u8; 1600];  // TODO(dtantsur): better number?
 
         let (amt, src) = try!(self.socket.recv_from(&mut buf));
-        let benc = try!(bencode::from_buffer(buf.slice(0, amt)).map_err(|e| {
+        let benc = try!(bencode::from_buffer(&buf[0..amt]).map_err(|e| {
             old_io::IoError {
                 kind: old_io::InvalidInput,
                 desc: "Cannot read bencoded buffer",
