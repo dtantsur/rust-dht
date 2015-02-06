@@ -11,7 +11,7 @@
 //! [BEP 0005](http://www.bittorrent.org/beps/bep_0005.html).
 
 use std::{collections,iter,fmt};
-use std::path::BytesContainer;
+use std::old_path::BytesContainer;
 
 use bencode::{self, Bencode, FromBencode, ToBencode};
 use bencode::util::ByteString;
