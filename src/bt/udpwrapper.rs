@@ -45,6 +45,9 @@ impl UdpSocketWrapper {
     }
 }
 
+const BUFFER_SIZE: usize = 65535;
+const READ_TIMEOUT: u64 = 1000;
+
 impl GenericSocketWrapper for UdpSocketWrapper {
     /// Send package to the node.
     fn send(&mut self, package: &protocol::Package, node: &base::Node)
@@ -56,9 +59,10 @@ impl GenericSocketWrapper for UdpSocketWrapper {
 
     /// Receive package.
     fn receive(&mut self) -> IoResult<(protocol::Package, ip::SocketAddr)> {
-        let mut buf = [0u8; 1600];  // TODO(dtantsur): better number?
+        let mut buf = Box::new([0; BUFFER_SIZE]);
 
-        let (amt, src) = try!(self.socket.recv_from(&mut buf));
+        self.socket.set_read_timeout(Some(READ_TIMEOUT));
+        let (amt, src) = try!(self.socket.recv_from(&mut *buf));
         let benc = try!(bencode::from_buffer(&buf[0..amt]).map_err(|e| {
             old_io::IoError {
                 kind: old_io::InvalidInput,

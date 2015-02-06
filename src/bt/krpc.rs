@@ -10,7 +10,7 @@
 //! KRPC DHT service as described in
 //! [BEP 0005](http://www.bittorrent.org/beps/bep_0005.html).
 
-use std::old_io::IoResult;
+use std::old_io::{IoErrorKind, IoResult};
 use std::sync;
 use std::thread;
 
@@ -57,9 +57,18 @@ Clone for KRpcService<TNodeTable, TSocket> {
 
 fn handle_incoming<TNodeTable: base::GenericNodeTable,
                    TSocket: udpwrapper::GenericSocketWrapper>
-                   (service: KRpcService<TNodeTable, TSocket>) {
-    while *service.active.read().unwrap() {}
-    // TODO(divius): implement
+                   (mut service: KRpcService<TNodeTable, TSocket>) {
+    while *service.active.read().unwrap() {
+        match service.socket.receive() {
+            Ok((package, addr)) =>
+                // TODO(divius): implement
+                debug!("Received {:?} from {:?}", package, addr),
+            Err(e) =>
+                if e.kind != IoErrorKind::TimedOut {
+                    debug!("Error during receiving {}", e);
+                }
+        }
+    }
 }
 
 impl KRpcService<knodetable::KNodeTable, udpwrapper::UdpSocketWrapper> {
