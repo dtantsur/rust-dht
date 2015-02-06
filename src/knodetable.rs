@@ -37,7 +37,6 @@ static HASH_SIZE: usize = 160;
 /// Keeps nodes in a number of k-buckets (equal to bit size of ID in a system,
 /// usually 160), where N-th k-bucket contains nodes with distance
 /// from 2^N to 2^(N+1) from our node.
-#[unstable]
 pub struct KNodeTable {
     this_id: num::BigUint,
     hash_size: usize,
@@ -52,7 +51,6 @@ struct KBucket {
 }
 
 
-#[unstable]
 impl KNodeTable {
     /// Create a new node table.
     ///
@@ -87,7 +85,6 @@ impl KNodeTable {
     }
 }
 
-#[unstable]
 impl GenericNodeTable for KNodeTable {
     fn random_id(&self) -> num::BigUint {
         let mut rng = rand::thread_rng();

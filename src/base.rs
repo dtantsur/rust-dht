@@ -17,10 +17,8 @@ use rustc_serialize as serialize;
 /// Trait representing table with known nodes.
 ///
 /// Keeps some reasonable subset of known nodes passed to `update`.
-#[unstable]
 pub trait GenericNodeTable : Send + Sync {
     /// Generate suitable random ID.
-    #[experimental]
     fn random_id(&self) -> num::BigUint;
     /// Store or update node in the table.
     fn update(&mut self, node: &Node) -> bool;
@@ -35,7 +33,6 @@ pub trait GenericNodeTable : Send + Sync {
 /// Every node has an address (IP and port) and a numeric ID, which is
 /// used to calculate metrics and look up data.
 #[derive(Clone, Debug)]
-#[unstable]
 pub struct Node {
     /// Network address of the node.
     pub address: ip::SocketAddr,

@@ -18,7 +18,6 @@
 
 #![crate_name = "dht"]
 #![crate_type = "lib"]
-#![unstable]
 
 #![feature(unsafe_destructor)]
 
@@ -32,11 +31,8 @@ pub use base::GenericNodeTable;
 pub use base::Node;
 pub use knodetable::KNodeTable;
 
-#[unstable]
 mod base;
-#[experimental]
 pub mod bt;
-#[unstable]
 mod knodetable;
 
 mod utils;
