@@ -67,9 +67,9 @@ impl serialize::Decodable for Node {
             let addr = try!(d.read_struct_field("address", 0, |d2| {
                 let s = try!(d2.read_str());
                 match FromStr::from_str(s.as_slice()) {
-                    Some(addr) => Ok(addr),
-                    None => {
-                        let err = format!("Expected socket address, got {}", s);
+                    Ok(addr) => Ok(addr),
+                    Err(e) => {
+                        let err = format!("Expected socket address, got {}, error {:?}", s, e);
                         Err(d2.error(err.as_slice()))
                     }
                 }
@@ -78,9 +78,9 @@ impl serialize::Decodable for Node {
             let id = try!(d.read_struct_field("id", 1, |d2| {
                 let s = try!(d2.read_str());
                 match FromStr::from_str(s.as_slice()) {
-                    Some(id) => Ok(id),
-                    None => {
-                        let err = format!("Expected ID, got {}", s);
+                    Ok(id) => Ok(id),
+                    Err(e) => {
+                        let err = format!("Expected ID, got {}, error {:?}", s, e);
                         Err(d2.error(err.as_slice()))
                     }
                 }
