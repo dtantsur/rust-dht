@@ -169,7 +169,7 @@ impl<P : Peer> KBucket<P> {
     }
 
     pub fn find(&self, id: &P::ID, count: usize) -> Vec<P> {
-/*        let sort_fn = |&: a: &P, b: &P| {
+        let sort_fn = |&: a: &P, b: &P| {
             KNodeTable::<P>::distance(id, a.get_id())
                 .cmp(
             &KNodeTable::<P>::distance(id, b.get_id())
@@ -177,8 +177,8 @@ impl<P : Peer> KBucket<P> {
         };
         let mut data_copy = self.data.clone();
         data_copy.sort_by(sort_fn);
-        data_copy.slice(0, cmp::min(count, data_copy.len())).to_vec()*/
-        self.data.slice(0, cmp::min(count, self.data.len())).to_vec()
+        data_copy.slice(0, cmp::min(count, data_copy.len())).to_vec()
+//        self.data.slice(0, cmp::min(count, self.data.len())).to_vec()
     }
 
     fn update_position(&mut self, node: P) {
