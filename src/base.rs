@@ -26,11 +26,11 @@ pub trait GenericNodeTable : Send + Sync {
     type P : Peer;
     /// Generate suitable random ID.
     #[experimental]
-    fn random_id(&self) -> <Self::P as Peer>::Key;
+    fn random_id(&self) -> <Self::P as Peer>::Id;
     /// Store or update node in the table.
     fn update(&mut self, node: &Self::P) -> bool;
     /// Find given number of node, closest to given ID.
-    fn find(&self, id: &<Self::P as Peer>::Key, count: usize) -> Vec<Self::P>;
+    fn find(&self, id: &<Self::P as Peer>::Id, count: usize) -> Vec<Self::P>;
     /// Pop expired or the oldest nodes from table for inspection.
     fn pop_oldest(&mut self) -> Vec<Self::P>;
 }
@@ -48,10 +48,10 @@ pub struct Node {
 }
 
 pub trait Peer : ip::ToSocketAddr + Send + Sync + fmt::Debug + Clone {
-    type Key : Eq + Send + Sync + fmt::Debug;
-    fn get_key<'a> (&self) -> &Self::Key; // TODO change it to return &Key (lot of useless clone in impls
-    fn key_as_buint<'a>(&'a Self::Key) -> &'a num::BigUint;
-    fn random_id(usize) -> Self::Key; // TODO usize in peer trait
+    type Id : Eq + Send + Sync + fmt::Debug;
+    fn id<'a> (&self) -> &Self::Id; // TODO change it to return &Key (lot of useless clone in impls
+    fn key_as_buint<'a>(&'a Self::Id) -> &'a num::BigUint;
+    fn random_id(usize) -> Self::Id; // TODO usize in peer trait
 }
 
 impl ip::ToSocketAddr for Node {
@@ -62,9 +62,9 @@ impl ip::ToSocketAddr for Node {
 }
 
 impl Peer for Node {
-    type Key = num::BigUint;
+    type Id = num::BigUint;
     #[inline]
-    fn get_key<'a> (&'a self) -> &'a num::BigUint {
+    fn id<'a> (&'a self) -> &'a num::BigUint {
         &self.id
     }
     #[inline]
