@@ -28,8 +28,8 @@ use super::udpwrapper;
 /// ```
 /// let service = dht::bt::KRpcService::new_default(this_node);
 /// ```
-pub struct KRpcService<TNodeTable: base::GenericNodeTable,
-                       TSocket: udpwrapper::GenericSocketWrapper> {
+pub struct KRpcService<TNodeTable: base::GenericNodeTable + 'static,
+                       TSocket: udpwrapper::GenericSocketWrapper + 'static> {
     this_node: base::Node,
     node_table: sync::Arc<sync::RwLock<TNodeTable>>,
     socket: TSocket,
@@ -94,7 +94,7 @@ KRpcService<TNodeTable, TSocket> {
         };
 
         let self_clone = self_.clone();
-        thread::Thread::spawn(move || handle_incoming(self_clone));
+        thread::spawn(move || handle_incoming(self_clone));
 
         Ok(self_)
     }

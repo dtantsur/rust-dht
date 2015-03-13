@@ -20,7 +20,7 @@ use std::ops::BitXor;
 use num;
 use num::Zero;
 use num::bigint::RandBigInt;
-use std::rand;  // FIXME: drop std:: once num 0.1.13 is released
+use rand;
 
 use super::GenericNodeTable;
 use super::Node;
@@ -140,7 +140,7 @@ impl KBucket {
     }
 
     pub fn find(&self, id: &num::BigUint, count: usize) -> Vec<Node> {
-        let sort_fn = |&: a: &Node, b: &Node| {
+        let sort_fn = |a: &Node, b: &Node| {
             KNodeTable::distance(id, &a.id)
                 .cmp(&KNodeTable::distance(id, &b.id))
         };
@@ -252,7 +252,7 @@ mod test {
     fn test_nodetable_random_id() {
         let n = KNodeTable::with_details(
             test::usize_to_id(42), 1, HASH_SIZE);
-        for _ in range(0us, 100us) {
+        for _ in range(0, 100) {
             assert!(n.random_id().bits() <= HASH_SIZE);
         }
         assert!(n.random_id() != n.random_id());
