@@ -8,12 +8,12 @@
 //
 
 use std::str::FromStr;
-use num::bigint::RandBigInt;
 use std::old_io::net::ip;
 use std::old_io::IoResult;
 use std::ops::BitXor;
 use std::fmt;
-use std::rand;
+use rand;
+use num::bigint::RandBigInt;
 
 use num;
 use rustc_serialize as serialize;
@@ -22,18 +22,21 @@ use rustc_serialize as serialize;
 /// Trait representing table with known nodes.
 ///
 /// Keeps some reasonable subset of known nodes passed to `update`.
-#[unstable]
-pub trait GenericNodeTable : Send + Sync {
-    type P : Peer;
+pub trait GenericNodeTable : Send + Sync + 'static {
+    type P : Peer + 'static;
     /// Generate suitable random ID.
-    #[experimental]
-    fn random_id(&self) -> <Self::P as Peer>::ID;
+//    #[experimental]
+    fn random_id(&self) -> <Self::P as Peer>::Id;
     /// Store or update node in the table.
     fn update(&mut self, node: &Self::P) -> bool;
     /// Find given number of node, closest to given ID.
-    fn find(&self, id: &<Self::P as Peer>::ID, count: usize) -> Vec<Self::P>;
+    fn find(&self, id: &<Self::P as Peer>::Id, count: usize) -> Vec<Self::P>;
     /// Pop expired or the oldest nodes from table for inspection.
     fn pop_oldest(&mut self) -> Vec<Self::P>;
+    /// Remove a given node from table.
+    fn remove(&mut self, id: &<Self::P as Peer>::Id) -> bool;
+
+
 }
 
 /// Structure representing a node in system.
@@ -41,7 +44,6 @@ pub trait GenericNodeTable : Send + Sync {
 /// Every node has an address (IP and port) and a numeric ID, which is
 /// used to calculate metrics and look up data.
 #[derive(Clone, Debug)]
-#[unstable]
 pub struct Node {
     /// Network address of the node.
     pub address: ip::SocketAddr,
@@ -49,11 +51,11 @@ pub struct Node {
     pub id: num::BigUint,
 }
 
-pub trait Peer : ip::ToSocketAddr + Send + Sync + fmt::Debug + Clone {
-    type ID : Eq + Send + Sync + fmt::Debug;
-    fn get_id<'a> (&'a self) -> &'a Self::ID; // TODO change it to return &ID (lot of useless clone in impls
-    fn key_as_buint<'a>(&'a Self::ID) -> &'a num::BigUint;
-    fn random_id(usize) -> Self::ID; // TODO usize in peer trait
+pub trait Peer :  Send + Sync + fmt::Debug + Clone + 'static {
+    type Id : Eq + Send + Sync + fmt::Debug + 'static;
+    fn id<'a> (&self) -> &Self::Id; // TODO change it to return &Key (lot of useless clone in impls
+    fn key_as_buint<'a>(&'a Self::Id) -> &'a num::BigUint;
+    fn random_id(usize) -> Self::Id; // TODO usize in peer trait
 }
 
 impl ip::ToSocketAddr for Node {
@@ -64,9 +66,9 @@ impl ip::ToSocketAddr for Node {
 }
 
 impl Peer for Node {
-    type ID = num::BigUint;
+    type Id = num::BigUint;
     #[inline]
-    fn get_id<'a> (&'a self) -> &'a num::BigUint {
+    fn id<'a> (&'a self) -> &'a num::BigUint {
         &self.id
     }
     #[inline]

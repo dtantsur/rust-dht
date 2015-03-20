@@ -18,7 +18,10 @@
 
 #![crate_name = "dht"]
 #![crate_type = "lib"]
-#![unstable]
+
+#![feature(core)]
+#![feature(io)]
+#![feature(path)]
 
 #![feature(unsafe_destructor)]
 
@@ -26,6 +29,7 @@ extern crate bencode;
 extern crate num;
 #[macro_use]
 extern crate log;
+extern crate rand;
 extern crate "rustc-serialize" as rustc_serialize;
 
 pub use base::GenericNodeTable;
@@ -33,9 +37,7 @@ pub use base::Node;
 pub use base::Peer;
 pub use knodetable::KNodeTable;
 
-#[unstable]
 mod base;
-#[experimental]
 pub mod bt;
 #[unstable]
 pub mod knodetable;

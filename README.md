@@ -2,7 +2,7 @@ rust-dht
 ========
 
 [![Build
-Status](https://travis-ci.org/Divius/rust-dht.svg?branch=master)](https://travis-ci.org/Divius/rust-dht)
+Status](https://travis-ci.org/divius/rust-dht.svg?branch=master)](https://travis-ci.org/divius/rust-dht)
 [Online Documentation](http://divius.net/rust/dht)
 
 A work-in-progress of

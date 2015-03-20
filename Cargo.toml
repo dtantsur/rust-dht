@@ -2,9 +2,9 @@
 
 name = "dht"
 description = "Implementation of Kademlia-based DHT in Rust"
-version = "0.0.0"
+version = "0.0.1"
 authors = ["Dmitry Tantsur <divius.inside@gmail.com>"]
-homepage = "https://github.com/Divius/rust-dht"
+homepage = "https://github.com/divius/rust-dht"
 readme = "README.md"
 license = "Apache-2.0/MIT"
 
@@ -12,8 +12,9 @@ license = "Apache-2.0/MIT"
 
 bencode = "~0.1.7"
 log = "~0.2.1"
-num = "~0.1.10"
-rustc-serialize = "~0.2.10"
+num = "~0.1.16"
+rand = "~0.2.0"
+rustc-serialize = "0.3.6"
 
 [lib]
 

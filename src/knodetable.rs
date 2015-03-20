@@ -15,11 +15,13 @@
 //! using `pop_oldest` call.
 
 use std::cmp;
-use num::Zero;
+use std::ops::BitXor;
 
 use num;
+use num::Zero;
+use num::bigint::RandBigInt;
+use std::rand;  // FIXME: drop std:: once num 0.1.13 is released
 use std::num::ToPrimitive;
-use std::ops::BitXor;
 
 use super::GenericNodeTable;
 use super::base::{Peer};
@@ -39,7 +41,7 @@ static HASH_SIZE: usize = 160;
 /// from 2^N to 2^(N+1) from our node.
 #[unstable]
 pub struct KNodeTable<P : Peer> {
-    this_id: P::ID,
+    this_id: P::Id,
     hash_size: usize,
     // TODO(divius): convert to more appropriate data structure
     buckets: Vec<KBucket<P>>,
@@ -57,12 +59,12 @@ impl<P : Peer> KNodeTable<P> {
     /// Create a new node table.
     ///
     /// `this_id` -- ID of the current node (used to calculate metrics).
-    pub fn new(this_id: P::ID) -> KNodeTable<P> {
+    pub fn new(this_id: P::Id) -> KNodeTable<P> {
         KNodeTable::with_details(this_id, BUCKET_SIZE, HASH_SIZE)
     }
 
     // TODO(divius): make public?
-    fn with_details(this_id: P::ID, bucket_size: usize,
+    fn with_details(this_id: P::Id, bucket_size: usize,
                     hash_size: usize) -> KNodeTable<P> {
         KNodeTable {
             this_id: this_id,
@@ -73,12 +75,12 @@ impl<P : Peer> KNodeTable<P> {
     }
 
     #[inline]
-    fn distance (id1: &P::ID, id2: &P::ID) -> num::BigUint {
+    fn distance (id1: &P::Id, id2: &P::Id) -> num::BigUint {
        <P as Peer>::key_as_buint(id1).bitxor(<P as Peer>::key_as_buint(id2))
     }
 
 
-    fn bucket_number(&self, id: &P::ID) -> usize {
+    fn bucket_number(&self, id: &P::Id) -> usize {
         let diff = KNodeTable::<P>::distance(&self.this_id, id);
         debug_assert!(!diff.is_zero());
         let res = diff.bits() - 1;
@@ -87,22 +89,25 @@ impl<P : Peer> KNodeTable<P> {
         res
     }
 
+    
+    pub fn random_id(&self) -> P::Id {
+        <P as Peer>::random_id(self.hash_size)
+    }
 
-    #[inline]
     pub fn update(&mut self, node: &P) -> bool {
-        assert!(*node.get_id() != self.this_id);
-        let bucket = self.bucket_number(node.get_id());
+        assert!(*node.id() != self.this_id);
+        let bucket = self.bucket_number(node.id());
         self.buckets[bucket].update(node)
     }
 
-    pub fn find(&self, id: &P::ID, count: usize) -> Vec<P> {
+    pub fn find(&self, id: &P::Id, count: usize) -> Vec<P> {
         debug_assert!(count > 0);
         assert!(*id != self.this_id);
         let bucket = self.bucket_number(id);
         self.buckets[bucket].find(id, count)
     }
 
-    fn pop_oldest(&mut self) -> Vec<P> {
+    pub fn pop_oldest(&mut self) -> Vec<P> {
         // For every full k-bucket, pop the last.
         // TODO(divius): TTL expiration?
         self.buckets.iter_mut()
@@ -111,7 +116,7 @@ impl<P : Peer> KNodeTable<P> {
             .collect()
     }
 
-    pub fn remove(&mut self, id: &P::ID) -> bool {
+    pub fn remove(&mut self, id: &P::Id) -> bool {
         let bucket = self.bucket_number(id);
         self.buckets[bucket].remove(id)
     }
@@ -120,10 +125,9 @@ impl<P : Peer> KNodeTable<P> {
 }
 
 #[unstable]
-impl<P : Peer> GenericNodeTable for KNodeTable<P> {
-    type P = P;
+impl<P : Peer> GenericNodeTable for KNodeTable<P> { type P = P;
     
-    fn random_id(&self) -> P::ID {
+    fn random_id(&self) -> P::Id {
         <P as Peer>::random_id(self.hash_size)
     }
 
@@ -131,17 +135,20 @@ impl<P : Peer> GenericNodeTable for KNodeTable<P> {
         self.update(node)
     }
 
-    fn find(&self, id: &P::ID, count: usize) -> Vec<P> {
+    fn find(&self, id: &P::Id, count: usize) -> Vec<P> {
         self.find(id, count)
     }
 
     fn pop_oldest(&mut self) -> Vec<P> {
         self.pop_oldest()
     }
+
+    fn remove(&mut self, id: &P::Id) -> bool {
+        self.remove(id)
+    }
 }
 
 impl<P : Peer> KBucket<P> {
-
 
     pub fn new(k: usize) -> KBucket<P> {
         assert!(k > 0);
@@ -152,7 +159,7 @@ impl<P : Peer> KBucket<P> {
     }
 
     pub fn update(&mut self, node: &P) -> bool {
-        if self.data.iter().any(|x| x.get_id() == node.get_id()) {
+        if self.data.iter().any(|x| x.id() == node.id()) {
             self.update_position(node.clone());
             debug!("Promoted node {:?} to the top of kbucket", node);
             true
@@ -168,16 +175,16 @@ impl<P : Peer> KBucket<P> {
         }
     }
 
-    pub fn find(&self, id: &P::ID, count: usize) -> Vec<P> {
-        let sort_fn = |&: a: &P, b: &P| {
-            KNodeTable::<P>::distance(id, a.get_id())
+    pub fn find(&self, id: &P::Id, count: usize) -> Vec<P> {
+        let sort_fn = |a: &P, b: &P| {
+            KNodeTable::<P>::distance(id, a.id())
                 .cmp(
-            &KNodeTable::<P>::distance(id, b.get_id())
+            &KNodeTable::<P>::distance(id, b.id())
                 )
         };
         let mut data_copy = self.data.clone();
         data_copy.sort_by(sort_fn);
-        data_copy.slice(0, cmp::min(count, data_copy.len())).to_vec()
+        data_copy[0..cmp::min(count, data_copy.len())].to_vec()
 //        self.data.slice(0, cmp::min(count, self.data.len())).to_vec()
     }
 
@@ -185,17 +192,17 @@ impl<P : Peer> KBucket<P> {
         // TODO(divius): 1. optimize, 2. make it less ugly
 /*        let mut new_data = Vec::with_capacity(self.data.len());
         new_data.extend(self.data.iter()
-                        .filter(|x| x.get_id() != node.get_id())
+                        .filter(|x| x.id() != node.id())
                         .map(|x| x.clone()));
         new_data.push(node.clone());
         self.data = new_data;
         */
-        self.remove(node.get_id());
+        self.remove(node.id());
         self.data.push(node.clone());
     }
 
-    pub fn remove(&mut self, id: &P::ID) -> bool {
-        let oix = self.data.iter().position(|x| x.get_id() == id);
+    pub fn remove(&mut self, id: &P::Id) -> bool {
+        let oix = self.data.iter().position(|x| x.id() == id);
         match oix {
             Some(ix) => {
                 // slow consider swap remove even if not kad compatible

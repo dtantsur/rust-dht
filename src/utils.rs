@@ -1,7 +1,6 @@
 //! Various utilities
 
 use std::old_io::net::ip;
-use std::num::FromPrimitive;
 
 
 /// Convert socket address to bytes in network order.
