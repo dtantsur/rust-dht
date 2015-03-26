@@ -71,7 +71,7 @@ impl GenericSocketWrapper for UdpSocketWrapper {
             }
         }));
 
-        let pkg = try!(FromBencode::from_bencode(&benc).ok_or_else(|| {
+        let pkg = try!(FromBencode::from_bencode(&benc.iter().next().unwrap()).ok_or_else(|| {
             old_io::IoError {
                 kind: old_io::InvalidInput,
                 desc: "Cannot decode bencoded buffer",

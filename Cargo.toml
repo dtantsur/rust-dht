@@ -10,11 +10,14 @@ license = "Apache-2.0/MIT"
 
 [dependencies]
 
-bencode = "~0.1.7"
-log = "~0.2.1"
-num = "~0.1.16"
-rand = "~0.2.0"
+log = "0.3.0"
+num = "0.1.18"
+rand = "0.2.1"
 rustc-serialize = "0.3.7"
+
+[dependencies.bencode]
+#git = "https://github.com/arjantop/rust-bencode.git"
+git = "https://github.com/cheme/rust-bencode.git"
 
 [lib]
 

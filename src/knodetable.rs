@@ -20,7 +20,7 @@ use std::ops::BitXor;
 use num;
 use num::Zero;
 use num::bigint::RandBigInt;
-use std::rand;  // FIXME: drop std:: once num 0.1.13 is released
+use rand;  // FIXME: drop std:: once num 0.1.13 is released
 use std::num::ToPrimitive;
 
 use super::GenericNodeTable;
@@ -306,7 +306,7 @@ mod test {
     fn test_nodetable_random_id() {
         let n = KNodeTable::<Node>::with_details(
             test::usize_to_id(42), 1, HASH_SIZE);
-        for _ in range(0us, 100us) {
+        for _ in (0us .. 100us) {
             assert!(n.random_id().bits() <= HASH_SIZE);
         }
         assert!(n.random_id() != n.random_id());

@@ -21,7 +21,11 @@
 
 #![feature(core)]
 #![feature(io)]
+#![feature(old_io)]
 #![feature(path)]
+#![feature(old_path)]
+#![feature(collections)]
+#![feature(std_misc)]
 
 #![feature(unsafe_destructor)]
 
@@ -30,7 +34,7 @@ extern crate num;
 #[macro_use]
 extern crate log;
 extern crate rand;
-extern crate "rustc-serialize" as rustc_serialize;
+extern crate rustc_serialize;
 
 pub use base::GenericNodeTable;
 pub use base::Node;

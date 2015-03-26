@@ -299,7 +299,7 @@ mod test {
     fn common<'a>(b: &'a Bencode, typ: &str) -> &'a bencode::DictMap {
         match *b {
             Bencode::Dict(ref d) => {
-                let tt_val = &d[key("tt")];
+                let tt_val = &d[&key("tt")];
                 match *tt_val {
                     Bencode::ByteString(ref v) => {
                         assert_eq!(vec![1, 2, 254, 255], *v);
@@ -307,7 +307,7 @@ mod test {
                     _ => panic!("unexpected {:?}", tt_val)
                 };
 
-                let y_val = &d[key("y")];
+                let y_val = &d[&key("y")];
                 match *y_val {
                     Bencode::ByteString(ref v) => {
                         assert_eq!(typ.as_bytes(), v.as_slice());
@@ -324,7 +324,7 @@ mod test {
     fn dict<'a>(b: &'a Bencode, typ: &str) -> &'a bencode::DictMap {
         let d = common(b, typ);
 
-        let typ_val = &d[key(typ)];
+        let typ_val = &d[&key(typ)];
         match *typ_val {
             Bencode::Dict(ref m) => m,
             _ => panic!("unexpected {:?}", typ_val)
@@ -334,7 +334,7 @@ mod test {
     fn list<'a>(b: &'a Bencode, typ: &str) -> &'a bencode::ListVec {
         let d = common(b, typ);
 
-        let typ_val = &d[key(typ)];
+        let typ_val = &d[&key(typ)];
         match *typ_val {
             Bencode::List(ref l) => l,
             _ => panic!("unexpected {:?}", typ_val)
@@ -389,7 +389,7 @@ mod test {
         if let Payload::Query(d) = p2.payload {
             assert_eq!(1, d.len());
             assert_eq!(Bencode::ByteString(vec![111, 107]),
-                       d[key("test")]);
+                       d[&key("test")]);
         }
         else {
             panic!("Expected Query, got {:?}", p2.payload);
@@ -418,7 +418,7 @@ mod test {
         if let Payload::Response(d) = p2.payload {
             assert_eq!(1, d.len());
             assert_eq!(Bencode::ByteString(vec![111, 107]),
-                       d[key("test")]);
+                       d[&key("test")]);
         }
         else {
             panic!("Expected Response, got {:?}", p2.payload);

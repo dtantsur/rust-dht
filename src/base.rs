@@ -13,6 +13,8 @@ use std::old_io::IoResult;
 use std::ops::BitXor;
 use std::fmt;
 use rand;
+use rand::{ThreadRng,Rng};
+use num::BigUint;
 use num::bigint::RandBigInt;
 
 use num;
