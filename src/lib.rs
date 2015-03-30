@@ -26,6 +26,7 @@
 #![feature(old_path)]
 #![feature(collections)]
 #![feature(std_misc)]
+#![feature(slice_patterns)]
 
 #![feature(unsafe_destructor)]
 
