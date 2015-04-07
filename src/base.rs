@@ -136,7 +136,7 @@ impl serialize::Decodable for Node {
 #[cfg(test)]
 mod test {
     use rustc_serialize::json;
-    use std::num::ToPrimitive;
+    use num::traits::ToPrimitive;
 
     use super::Node;
 
@@ -166,7 +166,7 @@ mod test {
         };
         let j = json::encode(&sn);
         let n: Node = json::decode(j.unwrap().as_slice()).unwrap();
-        assert_eq!(42, n.id.to_uint().unwrap());
+        assert_eq!(42, n.id.to_usize().unwrap());
     }
 
     #[test]

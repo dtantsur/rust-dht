@@ -15,8 +15,8 @@ use std::old_path::BytesContainer;
 
 use bencode::{self, Bencode, FromBencode, ToBencode};
 use bencode::util::ByteString;
-use std::num::FromPrimitive;
-use std::num::ToPrimitive;
+use num::traits::FromPrimitive;
+use num::traits::ToPrimitive;
 use num;
 
 use super::super::base;
@@ -107,7 +107,7 @@ fn id_to_netbytes(id: &num::BigUint) -> Vec<u8> {
 }
 
 fn id_from_netbytes(bytes: &[u8]) -> num::BigUint {
-    let mut result: num::BigUint = FromPrimitive::from_int(0).unwrap();
+    let mut result: num::BigUint = FromPrimitive::from_u8(0).unwrap();
     let mut shift = 0;
     for i in bytes.iter().rev() {
         let val: num::BigUint = FromPrimitive::from_u8(*i).unwrap();
@@ -224,7 +224,7 @@ impl FromBencode for Package {
 
         let (payload, sender) = match typ.container_as_str() {
             Some(ERROR) => match *payload_data {
-                Bencode::List(ref v) => match v.as_slice() {
+                Bencode::List(ref v) => match &v[..] {
                     [Bencode::Number(code), Bencode::ByteString(ref msg)] => {
                         let str_msg = match msg.container_as_str() {
                             Some(s) => s,
@@ -310,7 +310,7 @@ mod test {
                 let y_val = &d[&key("y")];
                 match *y_val {
                     Bencode::ByteString(ref v) => {
-                        assert_eq!(typ.as_bytes(), v.as_slice());
+                        assert_eq!(typ.as_bytes(), &v[..]);
                     },
                     _ => panic!("unexpected {:?}", y_val)
                 };
@@ -356,11 +356,11 @@ mod test {
         let p = new_package(Payload::Error(10, "error".to_string()));
         let enc = p.to_bencode();
         let p2: Package = FromBencode::from_bencode(&enc).unwrap();
-        assert_eq!(FAKE_TR_ID, p2.transaction_id.as_slice());
+        assert_eq!(FAKE_TR_ID, &p2.transaction_id[..]);
         assert!(p2.sender.is_none());
         if let Payload::Error(code, msg) = p2.payload {
             assert_eq!(10, code);
-            assert_eq!("error", msg.as_slice());
+            assert_eq!("error", &msg[..]);
         }
         else {
             panic!("Expected Error, got {:?}", p2.payload);
@@ -384,7 +384,7 @@ mod test {
         let p = new_package(Payload::Query(payload));
         let enc = p.to_bencode();
         let p2: Package = FromBencode::from_bencode(&enc).unwrap();
-        assert_eq!(FAKE_TR_ID, p2.transaction_id.as_slice());
+        assert_eq!(FAKE_TR_ID, &p2.transaction_id[..]);
         assert_eq!(test::usize_to_id(42), p2.sender.unwrap().id);
         if let Payload::Query(d) = p2.payload {
             assert_eq!(1, d.len());
@@ -413,7 +413,7 @@ mod test {
         let p = new_package(Payload::Response(payload));
         let enc = p.to_bencode();
         let p2: Package = FromBencode::from_bencode(&enc).unwrap();
-        assert_eq!(FAKE_TR_ID, p2.transaction_id.as_slice());
+        assert_eq!(FAKE_TR_ID, &p2.transaction_id[..]);
         assert_eq!(test::usize_to_id(42), p2.sender.unwrap().id);
         if let Payload::Response(d) = p2.payload {
             assert_eq!(1, d.len());
@@ -439,7 +439,7 @@ mod test {
         let mut bytes : Vec<u8> = iter::repeat(0u8).take(16).collect();
         bytes.push_all(&[0x0A, 0x0b, 0x0C, 0x0D]);
         let expected = test::usize_to_id(0x0A0B0C0D);
-        let id = super::id_from_netbytes(bytes.as_slice());
+        let id = super::id_from_netbytes(&bytes[..]);
         assert_eq!(expected, id);
     }
 
@@ -459,7 +459,7 @@ mod test {
         let n: base::Node =
             FromBencode::from_bencode(&Bencode::ByteString(b)).unwrap();
         assert_eq!(n.id, test::usize_to_id(42));
-        assert_eq!(n.address.to_string().as_slice(), "127.0.0.1:80");
+        assert_eq!(&n.address.to_string()[..], "127.0.0.1:80");
     }
 
     #[test]

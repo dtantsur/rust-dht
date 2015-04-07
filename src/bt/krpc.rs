@@ -13,7 +13,7 @@
 use std::old_io::{IoErrorKind, IoResult};
 use std::sync;
 use std::thread;
-use std::num::ToPrimitive;
+use num::traits::ToPrimitive;
 
 use super::super::base;
 use super::super::knodetable;
@@ -127,7 +127,7 @@ mod test {
     use std::old_io::IoResult;
     use std::old_io::net::ip;
 
-    use std::num::ToPrimitive;
+    use num::traits::ToPrimitive;
     use num;
 
     use super::super::super::base::{self, GenericNodeTable};

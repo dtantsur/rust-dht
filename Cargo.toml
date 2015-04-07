@@ -14,9 +14,8 @@ log = "0.3.0"
 num = "0.1.19"
 rand = "0.3.3"
 rustc-serialize = "0.3.7"
-
+#bencode = "0.1.10"
 [dependencies.bencode]
-#git = "https://github.com/arjantop/rust-bencode.git"
 git = "https://github.com/cheme/rust-bencode.git"
 
 [lib]

@@ -53,7 +53,7 @@ impl GenericSocketWrapper for UdpSocketWrapper {
     fn send(&mut self, package: &protocol::Package, node: &base::Node)
             -> IoResult<()> {
         let pkg = try!(package.to_bencode().to_bytes());
-        try!(self.socket.send_to(pkg.as_slice(), node.address.clone()));
+        try!(self.socket.send_to(&pkg[..], node.address.clone()));
         Ok(())
     }
 
@@ -71,7 +71,7 @@ impl GenericSocketWrapper for UdpSocketWrapper {
             }
         }));
 
-        let pkg = try!(FromBencode::from_bencode(&benc.iter().next().unwrap()).ok_or_else(|| {
+        let pkg = try!(FromBencode::from_bencode(&benc).ok_or_else(|| {
             old_io::IoError {
                 kind: old_io::InvalidInput,
                 desc: "Cannot decode bencoded buffer",

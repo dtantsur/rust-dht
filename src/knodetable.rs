@@ -219,7 +219,7 @@ impl<P : Peer> KBucket<P> {
 #[cfg(test)]
 mod test {
     use num;
-    use std::num::ToPrimitive;
+    use num::traits::ToPrimitive;
 
     use super::super::GenericNodeTable;
     use super::super::Node;
@@ -271,11 +271,11 @@ mod test {
         assert_eq!(1, n.buckets[0].data.len());
         let nodes = n.pop_oldest();
         assert_eq!(1, nodes.len());
-        assert_eq!(41, nodes[0].id.to_int().unwrap());
+        assert_eq!(41, nodes[0].id.to_isize().unwrap());
         assert_eq!(0, n.buckets[2].data.len());
         assert_eq!(1, n.buckets[1].data.len());
         assert_eq!(1, n.buckets[0].data.len());
-        assert_eq!(40, n.buckets[1].data[0].id.to_int().unwrap());
+        assert_eq!(40, n.buckets[1].data[0].id.to_isize().unwrap());
     }
 
     #[test]
