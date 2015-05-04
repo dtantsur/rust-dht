@@ -30,7 +30,7 @@
 
 #![feature(unsafe_destructor)]
 
-extern crate bencode;
+//extern crate bencode;
 extern crate num;
 #[macro_use]
 extern crate log;
@@ -44,7 +44,6 @@ pub use knodetable::KNodeTable;
 
 mod base;
 pub mod bt;
-#[unstable]
 pub mod knodetable;
 
 mod utils;

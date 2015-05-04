@@ -1,5 +1,5 @@
 //! Various utilities
-
+/*
 use std::old_io::net::ip;
 
 
@@ -21,11 +21,13 @@ pub fn netaddr_from_netbytes(bytes: &[u8]) -> ip::SocketAddr {
         port: ((bytes[4] as u16) << 8) + bytes[5] as u16
     }
 }
-
+*/
 
 #[cfg(test)]
 pub mod test {
-    use std::old_io::net::ip;
+    use std::net::SocketAddr;
+    use std::net::SocketAddrV4;
+    use std::net::Ipv4Addr;
     use num::traits::FromPrimitive;
 
     use num;
@@ -42,10 +44,10 @@ pub mod test {
     pub fn new_node_with_port(id: usize, port: u16) -> Node {
         Node {
             id: FromPrimitive::from_usize(id).unwrap(),
-            address: ip::SocketAddr {
-                ip: ip::Ipv4Addr(127, 0, 0, 1),
-                port: port
-            }
+            address: SocketAddr::V4( SocketAddrV4::new( 
+                Ipv4Addr::new(127, 0, 0, 1),
+                port
+            ) )
         }
     }
 

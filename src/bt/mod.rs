@@ -9,9 +9,9 @@
 
 //! BitTorrent DHT implementation.
 
-pub use self::krpc::DefaultKRpcService;
-pub use self::krpc::KRpcService;
+//pub use self::krpc::DefaultKRpcService;
+//pub use self::krpc::KRpcService;
 
-mod krpc;
-pub mod protocol;
-pub mod udpwrapper;
+//mod krpc;
+//pub mod protocol;
+//pub mod udpwrapper;

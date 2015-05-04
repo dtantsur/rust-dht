@@ -8,10 +8,9 @@
 //
 
 use std::str::FromStr;
-use std::old_io::net::ip;
-use std::old_io::IoResult;
 use std::ops::BitXor;
 use std::fmt;
+use std::net::SocketAddr;
 use rand;
 use rand::{ThreadRng,Rng};
 use num::BigUint;
@@ -48,7 +47,7 @@ pub trait GenericNodeTable : Send + Sync + 'static {
 #[derive(Clone, Debug)]
 pub struct Node {
     /// Network address of the node.
-    pub address: ip::SocketAddr,
+    pub address: SocketAddr,
     /// ID of the node.
     pub id: num::BigUint,
 }
@@ -60,12 +59,6 @@ pub trait Peer :  Send + Sync + fmt::Debug + Clone + 'static {
     fn random_id(usize) -> Self::Id; // TODO usize in peer trait
 }
 
-impl ip::ToSocketAddr for Node {
-    #[inline]
-    fn to_socket_addr(&self) -> IoResult<ip::SocketAddr>{
-        Ok(self.address)
-    }
-}
 
 impl Peer for Node {
     type Id = num::BigUint;
@@ -107,22 +100,22 @@ impl serialize::Decodable for Node {
         d.read_struct("Node", 2, |d| {
             let addr = try!(d.read_struct_field("address", 0, |d2| {
                 let s = try!(d2.read_str());
-                match FromStr::from_str(s.as_slice()) {
+                match FromStr::from_str(&s[..]) {
                     Ok(addr) => Ok(addr),
                     Err(e) => {
                         let err = format!("Expected socket address, got {}, error {:?}", s, e);
-                        Err(d2.error(err.as_slice()))
+                        Err(d2.error(&err[..]))
                     }
                 }
             }));
 
             let id = try!(d.read_struct_field("id", 1, |d2| {
                 let s = try!(d2.read_str());
-                match FromStr::from_str(s.as_slice()) {
+                match FromStr::from_str(&s[..]) {
                     Ok(id) => Ok(id),
                     Err(e) => {
                         let err = format!("Expected ID, got {}, error {:?}", s, e);
-                        Err(d2.error(err.as_slice()))
+                        Err(d2.error(&err[..]))
                     }
                 }
             }));
@@ -153,9 +146,9 @@ mod test {
     fn test_node_encode() {
         let n = test::new_node(42);
         let j = json::encode(&n);
-        let m: SimplifiedNode = json::decode(j.unwrap().as_slice()).unwrap();
-        assert_eq!(test::ADDR, m.address.as_slice());
-        assert_eq!("42", m.id.as_slice());
+        let m: SimplifiedNode = json::decode(&j.unwrap()[..]).unwrap();
+        assert_eq!(test::ADDR, &m.address[..]);
+        assert_eq!("42", &m.id[..]);
     }
 
     #[test]
@@ -165,7 +158,7 @@ mod test {
             id: "42".to_string()
         };
         let j = json::encode(&sn);
-        let n: Node = json::decode(j.unwrap().as_slice()).unwrap();
+        let n: Node = json::decode(&j.unwrap()[..]).unwrap();
         assert_eq!(42, n.id.to_usize().unwrap());
     }
 
@@ -176,7 +169,7 @@ mod test {
             id: "42".to_string()
         };
         let j = json::encode(&sn);
-        assert!(json::decode::<Node>(j.unwrap().as_slice()).is_err());
+        assert!(json::decode::<Node>(&j.unwrap()[..]).is_err());
     }
 
     #[test]
@@ -186,14 +179,14 @@ mod test {
             id: "x42".to_string()
         };
         let j = json::encode(&sn);
-        assert!(json::decode::<Node>(j.unwrap().as_slice()).is_err());
+        assert!(json::decode::<Node>(&j.unwrap()[..]).is_err());
     }
 
     #[test]
     fn test_node_encode_decode() {
         let n = test::new_node(42);
         let j = json::encode(&n);
-        let n2 = json::decode::<Node>(j.unwrap().as_slice()).unwrap();
+        let n2 = json::decode::<Node>(&j.unwrap()[..]).unwrap();
         assert_eq!(n.id, n2.id);
         assert_eq!(n.address, n2.address);
     }

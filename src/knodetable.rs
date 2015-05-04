@@ -21,11 +21,9 @@ use num;
 use num::Zero;
 use num::bigint::RandBigInt;
 use rand;  // FIXME: drop std:: once num 0.1.13 is released
-use std::num::ToPrimitive;
 
 use super::GenericNodeTable;
 use super::base::{Peer};
-use std::old_io::{Timer};
 use std::time::Duration;
 
 
@@ -39,7 +37,6 @@ static HASH_SIZE: usize = 160;
 /// Keeps nodes in a number of k-buckets (equal to bit size of ID in a system,
 /// usually 160), where N-th k-bucket contains nodes with distance
 /// from 2^N to 2^(N+1) from our node.
-#[unstable]
 pub struct KNodeTable<P : Peer> {
     this_id: P::Id,
     hash_size: usize,
@@ -54,7 +51,6 @@ struct KBucket<P : Peer> {
 }
 
 
-#[unstable]
 impl<P : Peer> KNodeTable<P> {
     /// Create a new node table.
     ///
@@ -124,7 +120,6 @@ impl<P : Peer> KNodeTable<P> {
 
 }
 
-#[unstable]
 impl<P : Peer> GenericNodeTable for KNodeTable<P> { type P = P;
     
     fn random_id(&self) -> P::Id {
@@ -306,7 +301,7 @@ mod test {
     fn test_nodetable_random_id() {
         let n = KNodeTable::<Node>::with_details(
             test::usize_to_id(42), 1, HASH_SIZE);
-        for _ in (0us .. 100us) {
+        for _ in (0usize .. 100usize) {
             assert!(n.random_id().bits() <= HASH_SIZE);
         }
         assert!(n.random_id() != n.random_id());
