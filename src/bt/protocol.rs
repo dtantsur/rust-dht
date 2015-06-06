@@ -11,13 +11,10 @@
 //! [BEP 0005](http://www.bittorrent.org/beps/bep_0005.html).
 
 use std::{collections,iter,fmt};
-use std::old_path::BytesContainer;
 
 use bencode::{self, Bencode, FromBencode, ToBencode};
 use bencode::util::ByteString;
-use std::num::FromPrimitive;
-use std::num::ToPrimitive;
-use num;
+use num::{self, FromPrimitive, ToPrimitive};
 
 use super::super::base;
 use super::super::utils;
@@ -132,15 +129,17 @@ impl ToBencode for base::Node {
 }
 
 impl FromBencode for base::Node {
-    fn from_bencode(b: &Bencode) -> Option<base::Node> {
+    type Err = ();
+
+    fn from_bencode(b: &Bencode) -> Result<base::Node, ()> {
         match *b {
-            Bencode::ByteString(ref v) if v.len() == 26 => Some(base::Node {
+            Bencode::ByteString(ref v) if v.len() == 26 => Ok(base::Node {
                 id: id_from_netbytes(&v[0..20]),
                 address: utils::netaddr_from_netbytes(&v[20..26])
             }),
             _ => {
                 debug!("{:?} is unexpected representation for a node", b);
-                None
+                Err(())
             }
         }
     }
@@ -176,91 +175,146 @@ impl ToBencode for Package {
     }
 }
 
-macro_rules! debug_and_return(
-    ($( $arg:expr ),*) => ({
-        debug!($( $arg ),*);
-        return None;
-    })
-);
+/// Error during convering from/to Bencode
+pub enum ConvertingError {
+    MissingField(&'static str),
+    InvalidField(&'static str),
+    StructureError(&'static str),
+}
 
 macro_rules! bytes_or_none(
-    ($dict:ident, $key:expr, $msg:expr) => (
+    ($dict:ident, $key:expr, $err:expr) => (
         match $dict.get(&key($key)) {
             Some(&Bencode::ByteString(ref val)) => val,
-            _ => debug_and_return!($msg)
+            _ => {
+                return Err($err);
+            }
         }
     )
 );
 
 macro_rules! extract_sender(
-    ($dict:ident, $ty:expr, $msg:expr) => ({
+    ($dict:ident, $ty:expr) => ({
         let mut d = $dict.clone(); // TODO clone on btree map...
         if let Some(sender_be) = d.remove(&key(SENDER)) {
-            if let Some(sender) = FromBencode::from_bencode(&sender_be) {
+            if let Ok(sender) = FromBencode::from_bencode(&sender_be) {
                 ($ty(d), sender)
             }
             else {
-                debug_and_return!("Cannot decode sender {:?}", sender_be);
+                debug!("Cannot decode sender {:?}", sender_be);
+                return Err(ConvertingError::InvalidField("sender"));
             }
         }
         else {
-            debug_and_return!($msg);
+            return Err(ConvertingError::MissingField("sender"));
         }
     })
 );
 
+fn extract_error(v: &bencode::ListVec) -> Result<Payload, ConvertingError> {
+    match v.len() {
+        2 => match (v[0], v[1]) {
+            (Bencode::Number(code), Bencode::ByteString(ref msg)) => {
+                let str_msg = match String::from_utf8(msg.clone()) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        debug!("Error message is not UTF8: {:?} {:?}", msg, e);
+                        String::from_str("Unknown error")
+                    }
+                };
+                Ok(
+                    Payload::Error(code, str_msg)
+                )
+            }
+            _ => {
+                debug!("Error body of unknown structure {:?}", v);
+                return Err(ConvertingError::StructureError(
+                    "Error body of unknown structure"));
+            }
+        },
+        _ => {
+            debug!("Error body of unknown structure {:?}", v);
+            return Err(ConvertingError::StructureError(
+                "Error body of unknown structure"));
+        }
+    }
+}
+
+fn extract_payload_and_sender(typ: &Vec<u8>, payload_data: &bencode::Bencode)
+        -> Result<(Payload, Option<base::Node>), ConvertingError> {
+    let typ_str = match String::from_utf8(typ.clone()) {
+        Ok(s) => s,
+        Err(e) => {
+            debug!("Not a UTF8 string: field y, value {:?} {:?}", typ, e);
+            return Err(ConvertingError::InvalidField("y"));
+        }
+    };
+
+    let s: &str = &typ_str;
+    match s {
+        ERROR => match *payload_data {
+            Bencode::List(ref v) => {
+                let err: Payload = try!(extract_error(v));
+                Ok((err, None))
+            },
+            _ => {
+                debug!("Error body of unexpected type: {:?}", payload_data);
+                Err(ConvertingError::StructureError("Error body of unexpected type"))
+            }
+        },
+        QUERY => match *payload_data {
+            Bencode::Dict(ref d) => {
+                Ok(extract_sender!(d, Payload::Query))
+            },
+            _ => {
+                debug!("Query body of unexpected type: {:?}", payload_data);
+                Err(ConvertingError::StructureError("Query body of unexpected type"))
+            }
+        },
+        RESPONSE => match *payload_data {
+            Bencode::Dict(ref d) => {
+                Ok(extract_sender!(d, Payload::Response))
+            },
+            _ => {
+                debug!("Response body of unexpected type: {:?}", payload_data);
+                Err(ConvertingError::StructureError("Response body of unexpected type"))
+            }
+        },
+        unknown => {
+            debug!("Unexpected payload type {:?}", unknown);
+            Err(ConvertingError::StructureError("Unexpected payload type"))
+        },
+    }
+}
+
+
 impl FromBencode for Package {
-    fn from_bencode(b: &Bencode) -> Option<Package> {
+    type Err = ConvertingError;
+
+    fn from_bencode(b: &Bencode) -> Result<Package, ConvertingError> {
         let dict = match *b {
             Bencode::Dict(ref d) => d,
-            _ => debug_and_return!("Expected dict as top-level package, got {:?}", b)
+            _ => {
+                debug!("Expected dict as top-level package, got {:?}", b);
+                return Err(ConvertingError::StructureError(
+                    "Expected dict as top-level package"));
+            }
         };
 
-        let typ = bytes_or_none!(dict, TYPE, "No type");
+        let typ = bytes_or_none!(dict, TYPE,
+                                 ConvertingError::MissingField("typ"));
         let payload_data = match dict.get(&ByteString::from_vec(typ.clone())) {
             Some(val) => val,
-            None => debug_and_return!("No payload")
+            None => {
+                return Err(ConvertingError::StructureError("Empty payload"));
+            }
         };
 
-        let (payload, sender) = match typ.container_as_str() {
-            Some(ERROR) => match *payload_data {
-                Bencode::List(ref v) => match v.as_slice() {
-                    [Bencode::Number(code), Bencode::ByteString(ref msg)] => {
-                        let str_msg = match msg.container_as_str() {
-                            Some(s) => s,
-                            None => {
-                                debug!("Error message is not UTF8: {:?}", msg);
-                                "Unknown error"
-                            }
-                        };
-                        (Payload::Error(code, str_msg.to_string()), None)
-                    },
-                    _ => debug_and_return!(
-                        "Error body of unknown structure {:?}", v)
-                },
-                _ => debug_and_return!("Error body of unexpected type: {:?}",
-                                       payload_data)
-            },
-            Some(QUERY) => match *payload_data {
-                Bencode::Dict(ref d) =>
-                    extract_sender!(d, Payload::Query, "No sender ID in query"),
-                _ => debug_and_return!("Query body of unexpected type: {:?}",
-                                       payload_data)
-            },
-            Some(RESPONSE) => match *payload_data {
-                Bencode::Dict(ref d) =>
-                    extract_sender!(d, Payload::Response, "No sender ID in response"),
-                _ => debug_and_return!("Response body of unexpected type: {:?}",
-                                       payload_data)
-            },
-            Some(unknown) => debug_and_return!("Unexpected payload type {:?}",
-                                               unknown),
-            None => debug_and_return!("Not a UTF8 string: field y, value {:?}",
-                                      typ)
-        };
+        let (payload, sender) = try!(extract_payload_and_sender(typ, payload_data));
 
-        let tt = bytes_or_none!(dict, TR_ID, "No transaction id");
-        Some(Package {
+        let tt = bytes_or_none!(dict, TR_ID,
+                                ConvertingError::MissingField("transaction_id"));
+        Ok(Package {
             transaction_id: tt.clone(),
             payload: payload,
             sender: sender

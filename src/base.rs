@@ -8,7 +8,7 @@
 //
 
 use std::str::FromStr;
-use std::old_io::net::ip;
+use std::net;
 
 use num;
 use rustc_serialize as serialize;
@@ -35,7 +35,7 @@ pub trait GenericNodeTable : Send + Sync {
 #[derive(Clone, Debug)]
 pub struct Node {
     /// Network address of the node.
-    pub address: ip::SocketAddr,
+    pub address: net::SocketAddr,
     /// ID of the node.
     pub id: num::BigUint
 }
@@ -63,22 +63,22 @@ impl serialize::Decodable for Node {
         d.read_struct("Node", 2, |d| {
             let addr = try!(d.read_struct_field("address", 0, |d2| {
                 let s = try!(d2.read_str());
-                match FromStr::from_str(s.as_slice()) {
+                match FromStr::from_str(&s) {
                     Ok(addr) => Ok(addr),
                     Err(e) => {
                         let err = format!("Expected socket address, got {}, error {:?}", s, e);
-                        Err(d2.error(err.as_slice()))
+                        Err(d2.error(&err))
                     }
                 }
             }));
 
             let id = try!(d.read_struct_field("id", 1, |d2| {
                 let s = try!(d2.read_str());
-                match FromStr::from_str(s.as_slice()) {
+                match FromStr::from_str(&s) {
                     Ok(id) => Ok(id),
                     Err(e) => {
                         let err = format!("Expected ID, got {}, error {:?}", s, e);
-                        Err(d2.error(err.as_slice()))
+                        Err(d2.error(&err))
                     }
                 }
             }));

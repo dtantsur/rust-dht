@@ -9,9 +9,8 @@
 
 //! UDP socket wrapper.
 
-use std::old_io::{self, IoResult};
-use std::old_io::net::ip;
-use std::old_io::net::udp;
+use std::io;
+use std::net;
 
 use bencode::{self, FromBencode, ToBencode};
 
@@ -20,25 +19,24 @@ use super::protocol;
 
 
 /// Helper trait for any socket wrapper.
-pub trait GenericSocketWrapper : Send + Clone {
+pub trait GenericSocketWrapper : Send {
     /// Send package to the node.
     fn send(&mut self, package: &protocol::Package, node: &base::Node)
-        -> IoResult<()>;
+        -> io::Result<()>;
     /// Receive package.
-    fn receive(&mut self) -> IoResult<(protocol::Package, ip::SocketAddr)>;
+    fn receive(&mut self) -> io::Result<(protocol::Package, net::SocketAddr)>;
 }
 
 /// Wrapper around UDP socket with converting to/from Package.
-#[derive(Clone)]
 pub struct UdpSocketWrapper {
-    socket: udp::UdpSocket,
+    socket: net::UdpSocket,
 }
 
 
 impl UdpSocketWrapper {
     /// New wrapper listening on the current node's address.
-    pub fn new(this_node: &base::Node) -> IoResult<UdpSocketWrapper> {
-        let socket = try!(udp::UdpSocket::bind(this_node.address.clone()));
+    pub fn new(this_node: &base::Node) -> io::Result<UdpSocketWrapper> {
+        let socket = try!(net::UdpSocket::bind(this_node.address.clone()));
         Ok(UdpSocketWrapper {
             socket: socket
         })
@@ -46,37 +44,27 @@ impl UdpSocketWrapper {
 }
 
 const BUFFER_SIZE: usize = 65535;
-const READ_TIMEOUT: u64 = 1000;
 
 impl GenericSocketWrapper for UdpSocketWrapper {
     /// Send package to the node.
     fn send(&mut self, package: &protocol::Package, node: &base::Node)
-            -> IoResult<()> {
+            -> io::Result<()> {
         let pkg = try!(package.to_bencode().to_bytes());
         try!(self.socket.send_to(pkg.as_slice(), node.address.clone()));
         Ok(())
     }
 
     /// Receive package.
-    fn receive(&mut self) -> IoResult<(protocol::Package, ip::SocketAddr)> {
+    fn receive(&mut self) -> io::Result<(protocol::Package, net::SocketAddr)> {
         let mut buf = Box::new([0; BUFFER_SIZE]);
 
-        self.socket.set_read_timeout(Some(READ_TIMEOUT));
         let (amt, src) = try!(self.socket.recv_from(&mut *buf));
-        let benc = try!(bencode::from_buffer(&buf[0..amt]).map_err(|e| {
-            old_io::IoError {
-                kind: old_io::InvalidInput,
-                desc: "Cannot read bencoded buffer",
-                detail: Some(format!("Cannot read bencoded buffer: {}", e.msg))
-            }
+        let benc = try!(bencode::from_buffer(&buf[0..amt]).map_err(|_| {
+            io::Error::new(io::ErrorKind::InvalidInput, "Cannot read bencoded buffer")
         }));
 
-        let pkg = try!(FromBencode::from_bencode(&benc).ok_or_else(|| {
-            old_io::IoError {
-                kind: old_io::InvalidInput,
-                desc: "Cannot decode bencoded buffer",
-                detail: None
-            }
+        let pkg = try!(FromBencode::from_bencode(&benc).map_err(|_| {
+            io::Error::new(io::ErrorKind::InvalidInput, "Cannot read bencoded buffer")
         }));
         Ok((pkg, src))
     }
