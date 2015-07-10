@@ -29,10 +29,10 @@ pub fn netaddr_from_netbytes(bytes: &[u8]) -> net::SocketAddr {
 
 #[cfg(test)]
 pub mod test {
-    use std::old_io::net::ip;
-    use std::num::FromPrimitive;
+    use std::net;
 
     use num;
+    use num::{FromPrimitive, ToPrimitive};
 
     use super::super::Node;
 
@@ -45,15 +45,15 @@ pub mod test {
 
     pub fn new_node_with_port(id: usize, port: u16) -> Node {
         Node {
-            id: FromPrimitive::from_uint(id).unwrap(),
-            address: ip::SocketAddr {
-                ip: ip::Ipv4Addr(127, 0, 0, 1),
-                port: port
-            }
+            id: FromPrimitive::from_usize(id).unwrap(),
+            address: net::SocketAddr::V4(net::SocketAddrV4::new(
+                net::Ipv4Addr::new(127, 0, 0, 1),
+                port
+            ))
         }
     }
 
     pub fn usize_to_id(id: usize) -> num::BigUint {
-        FromPrimitive::from_uint(id).unwrap()
+        FromPrimitive::from_usize(id).unwrap()
     }
 }

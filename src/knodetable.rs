@@ -164,7 +164,7 @@ impl KBucket {
 #[cfg(test)]
 mod test {
     use num;
-    use std::num::ToPrimitive;
+    use num::ToPrimitive;
 
     use super::super::GenericNodeTable;
     use super::super::Node;
@@ -217,11 +217,11 @@ mod test {
         assert_eq!(1, n.buckets[0].data.len());
         let nodes = n.pop_oldest();
         assert_eq!(1, nodes.len());
-        assert_eq!(41, nodes[0].id.to_int().unwrap());
+        assert_eq!(41, nodes[0].id.to_i8().unwrap());
         assert_eq!(0, n.buckets[2].data.len());
         assert_eq!(1, n.buckets[1].data.len());
         assert_eq!(1, n.buckets[0].data.len());
-        assert_eq!(40, n.buckets[1].data[0].id.to_int().unwrap());
+        assert_eq!(40, n.buckets[1].data[0].id.to_i8().unwrap());
     }
 
     #[test]
@@ -252,7 +252,7 @@ mod test {
     fn test_nodetable_random_id() {
         let n = KNodeTable::with_details(
             test::usize_to_id(42), 1, HASH_SIZE);
-        for _ in range(0, 100) {
+        for _ in 0..100 {
             assert!(n.random_id().bits() <= HASH_SIZE);
         }
         assert!(n.random_id() != n.random_id());

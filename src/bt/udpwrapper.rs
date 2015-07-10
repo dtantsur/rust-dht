@@ -50,7 +50,7 @@ impl GenericSocketWrapper for UdpSocketWrapper {
     fn send(&mut self, package: &protocol::Package, node: &base::Node)
             -> io::Result<()> {
         let pkg = try!(package.to_bencode().to_bytes());
-        try!(self.socket.send_to(pkg.as_slice(), node.address.clone()));
+        try!(self.socket.send_to(&pkg, node.address.clone()));
         Ok(())
     }
 

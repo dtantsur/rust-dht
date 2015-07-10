@@ -19,12 +19,6 @@
 #![crate_name = "dht"]
 #![crate_type = "lib"]
 
-#![feature(core)]
-#![feature(io)]
-#![feature(path)]
-
-#![feature(unsafe_destructor)]
-
 extern crate bencode;
 extern crate num;
 #[macro_use]

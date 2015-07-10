@@ -91,8 +91,8 @@ impl serialize::Decodable for Node {
 
 #[cfg(test)]
 mod test {
+    use num::ToPrimitive;
     use rustc_serialize::json;
-    use std::num::ToPrimitive;
 
     use super::Node;
 
@@ -109,9 +109,9 @@ mod test {
     fn test_node_encode() {
         let n = test::new_node(42);
         let j = json::encode(&n);
-        let m: SimplifiedNode = json::decode(j.unwrap().as_slice()).unwrap();
-        assert_eq!(test::ADDR, m.address.as_slice());
-        assert_eq!("42", m.id.as_slice());
+        let m: SimplifiedNode = json::decode(&j.unwrap()).unwrap();
+        assert_eq!(test::ADDR, &m.address);
+        assert_eq!("42", &m.id);
     }
 
     #[test]
@@ -121,8 +121,8 @@ mod test {
             id: "42".to_string()
         };
         let j = json::encode(&sn);
-        let n: Node = json::decode(j.unwrap().as_slice()).unwrap();
-        assert_eq!(42, n.id.to_uint().unwrap());
+        let n: Node = json::decode(&j.unwrap()).unwrap();
+        assert_eq!(42, n.id.to_u8().unwrap());
     }
 
     #[test]
@@ -132,7 +132,7 @@ mod test {
             id: "42".to_string()
         };
         let j = json::encode(&sn);
-        assert!(json::decode::<Node>(j.unwrap().as_slice()).is_err());
+        assert!(json::decode::<Node>(&j.unwrap()).is_err());
     }
 
     #[test]
@@ -142,14 +142,14 @@ mod test {
             id: "x42".to_string()
         };
         let j = json::encode(&sn);
-        assert!(json::decode::<Node>(j.unwrap().as_slice()).is_err());
+        assert!(json::decode::<Node>(&j.unwrap()).is_err());
     }
 
     #[test]
     fn test_node_encode_decode() {
         let n = test::new_node(42);
         let j = json::encode(&n);
-        let n2 = json::decode::<Node>(j.unwrap().as_slice()).unwrap();
+        let n2 = json::decode::<Node>(&j.unwrap()).unwrap();
         assert_eq!(n.id, n2.id);
         assert_eq!(n.address, n2.address);
     }

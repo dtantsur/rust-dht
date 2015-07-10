@@ -104,7 +104,7 @@ fn id_to_netbytes(id: &num::BigUint) -> Vec<u8> {
 }
 
 fn id_from_netbytes(bytes: &[u8]) -> num::BigUint {
-    let mut result: num::BigUint = FromPrimitive::from_int(0).unwrap();
+    let mut result: num::BigUint = FromPrimitive::from_u8(0).unwrap();
     let mut shift = 0;
     for i in bytes.iter().rev() {
         let val: num::BigUint = FromPrimitive::from_u8(*i).unwrap();
@@ -176,6 +176,7 @@ impl ToBencode for Package {
 }
 
 /// Error during convering from/to Bencode
+#[derive(Debug)]
 pub enum ConvertingError {
     MissingField(&'static str),
     InvalidField(&'static str),
@@ -213,13 +214,13 @@ macro_rules! extract_sender(
 
 fn extract_error(v: &bencode::ListVec) -> Result<Payload, ConvertingError> {
     match v.len() {
-        2 => match (v[0], v[1]) {
-            (Bencode::Number(code), Bencode::ByteString(ref msg)) => {
+        2 => match (&v[0], &v[1]) {
+            (&Bencode::Number(code), &Bencode::ByteString(ref msg)) => {
                 let str_msg = match String::from_utf8(msg.clone()) {
                     Ok(s) => s,
                     Err(e) => {
                         debug!("Error message is not UTF8: {:?} {:?}", msg, e);
-                        String::from_str("Unknown error")
+                        "Unknown error".to_string()
                     }
                 };
                 Ok(
@@ -334,6 +335,7 @@ mod test {
     use super::super::super::base;
     use super::super::super::utils::test;
 
+    use super::ConvertingError;
     use super::key;
     use super::PayloadDict;
     use super::Package;
@@ -353,7 +355,7 @@ mod test {
     fn common<'a>(b: &'a Bencode, typ: &str) -> &'a bencode::DictMap {
         match *b {
             Bencode::Dict(ref d) => {
-                let tt_val = &d[key("tt")];
+                let tt_val = &d[&key("tt")];
                 match *tt_val {
                     Bencode::ByteString(ref v) => {
                         assert_eq!(vec![1, 2, 254, 255], *v);
@@ -361,10 +363,10 @@ mod test {
                     _ => panic!("unexpected {:?}", tt_val)
                 };
 
-                let y_val = &d[key("y")];
+                let y_val = &d[&key("y")];
                 match *y_val {
                     Bencode::ByteString(ref v) => {
-                        assert_eq!(typ.as_bytes(), v.as_slice());
+                        assert_eq!(*v, typ.as_bytes());
                     },
                     _ => panic!("unexpected {:?}", y_val)
                 };
@@ -378,7 +380,7 @@ mod test {
     fn dict<'a>(b: &'a Bencode, typ: &str) -> &'a bencode::DictMap {
         let d = common(b, typ);
 
-        let typ_val = &d[key(typ)];
+        let typ_val = &d[&key(typ)];
         match *typ_val {
             Bencode::Dict(ref m) => m,
             _ => panic!("unexpected {:?}", typ_val)
@@ -388,7 +390,7 @@ mod test {
     fn list<'a>(b: &'a Bencode, typ: &str) -> &'a bencode::ListVec {
         let d = common(b, typ);
 
-        let typ_val = &d[key(typ)];
+        let typ_val = &d[&key(typ)];
         match *typ_val {
             Bencode::List(ref l) => l,
             _ => panic!("unexpected {:?}", typ_val)
@@ -410,11 +412,11 @@ mod test {
         let p = new_package(Payload::Error(10, "error".to_string()));
         let enc = p.to_bencode();
         let p2: Package = FromBencode::from_bencode(&enc).unwrap();
-        assert_eq!(FAKE_TR_ID, p2.transaction_id.as_slice());
+        assert_eq!(p2.transaction_id, FAKE_TR_ID);
         assert!(p2.sender.is_none());
         if let Payload::Error(code, msg) = p2.payload {
             assert_eq!(10, code);
-            assert_eq!("error", msg.as_slice());
+            assert_eq!("error", msg);
         }
         else {
             panic!("Expected Error, got {:?}", p2.payload);
@@ -438,12 +440,12 @@ mod test {
         let p = new_package(Payload::Query(payload));
         let enc = p.to_bencode();
         let p2: Package = FromBencode::from_bencode(&enc).unwrap();
-        assert_eq!(FAKE_TR_ID, p2.transaction_id.as_slice());
+        assert_eq!(p2.transaction_id, FAKE_TR_ID);
         assert_eq!(test::usize_to_id(42), p2.sender.unwrap().id);
         if let Payload::Query(d) = p2.payload {
             assert_eq!(1, d.len());
             assert_eq!(Bencode::ByteString(vec![111, 107]),
-                       d[key("test")]);
+                       d[&key("test")]);
         }
         else {
             panic!("Expected Query, got {:?}", p2.payload);
@@ -467,12 +469,12 @@ mod test {
         let p = new_package(Payload::Response(payload));
         let enc = p.to_bencode();
         let p2: Package = FromBencode::from_bencode(&enc).unwrap();
-        assert_eq!(FAKE_TR_ID, p2.transaction_id.as_slice());
+        assert_eq!(p2.transaction_id, FAKE_TR_ID);
         assert_eq!(test::usize_to_id(42), p2.sender.unwrap().id);
         if let Payload::Response(d) = p2.payload {
             assert_eq!(1, d.len());
             assert_eq!(Bencode::ByteString(vec![111, 107]),
-                       d[key("test")]);
+                       d[&key("test")]);
         }
         else {
             panic!("Expected Response, got {:?}", p2.payload);
@@ -493,7 +495,7 @@ mod test {
         let mut bytes : Vec<u8> = iter::repeat(0u8).take(16).collect();
         bytes.push_all(&[0x0A, 0x0b, 0x0C, 0x0D]);
         let expected = test::usize_to_id(0x0A0B0C0D);
-        let id = super::id_from_netbytes(bytes.as_slice());
+        let id = super::id_from_netbytes(&bytes);
         assert_eq!(expected, id);
     }
 
@@ -513,14 +515,13 @@ mod test {
         let n: base::Node =
             FromBencode::from_bencode(&Bencode::ByteString(b)).unwrap();
         assert_eq!(n.id, test::usize_to_id(42));
-        assert_eq!(n.address.to_string().as_slice(), "127.0.0.1:80");
+        assert_eq!(n.address.to_string(), "127.0.0.1:80");
     }
 
     #[test]
     fn test_node_from_bencode_none() {
-        let n: Option<base::Node> =
-            FromBencode::from_bencode(&Bencode::Number(42));
-        assert!(n.is_none());
+        let n: Result<Package, ConvertingError> = FromBencode::from_bencode(&Bencode::Number(42));
+        assert!(n.is_err());
     }
 
     #[test]

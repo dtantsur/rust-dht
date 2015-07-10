@@ -11,12 +11,13 @@
 //! [BEP 0005](http://www.bittorrent.org/beps/bep_0005.html).
 
 use std::io;
+use std::net;
 use std::sync;
-use std::thread;
 
 use super::super::base;
 use super::super::knodetable;
 
+use super::protocol;
 use super::udpwrapper;
 
 
@@ -33,43 +34,11 @@ pub struct KRpcService<TNodeTable: base::GenericNodeTable + 'static,
     this_node: base::Node,
     node_table: sync::Arc<sync::RwLock<TNodeTable>>,
     socket: TSocket,
-    // this is for tests only, proper cancelling will follow later
-    active: sync::Arc<sync::RwLock<bool>>,
 }
 
 /// Default kind of KRpc service.
 pub type DefaultKRpcService = KRpcService<knodetable::KNodeTable, udpwrapper::UdpSocketWrapper>;
 
-
-// This can't be derived, compiler is confused because of Arc.
-impl<TNodeTable: base::GenericNodeTable,
-     TSocket: udpwrapper::GenericSocketWrapper>
-Clone for KRpcService<TNodeTable, TSocket> {
-    fn clone(&self) -> KRpcService<TNodeTable, TSocket> {
-        KRpcService {
-            this_node: self.this_node.clone(),
-            node_table: self.node_table.clone(),
-            socket: self.socket.clone(),
-            active: self.active.clone(),
-        }
-    }
-}
-
-fn handle_incoming<TNodeTable: base::GenericNodeTable,
-                   TSocket: udpwrapper::GenericSocketWrapper>
-                   (mut service: KRpcService<TNodeTable, TSocket>) {
-    while *service.active.read().unwrap() {
-        match service.socket.receive() {
-            Ok((package, addr)) =>
-                // TODO(divius): implement
-                debug!("Received {:?} from {:?}", package, addr),
-            Err(e) =>
-                if e.kind() != io::ErrorKind::TimedOut {
-                    debug!("Error during receiving {}", e);
-                }
-        }
-    }
-}
 
 impl KRpcService<knodetable::KNodeTable, udpwrapper::UdpSocketWrapper> {
     /// New service with default node table.
@@ -90,11 +59,7 @@ KRpcService<TNodeTable, TSocket> {
             this_node: this_node,
             node_table: sync::Arc::new(sync::RwLock::new(node_table)),
             socket: socket,
-            active: sync::Arc::new(sync::RwLock::new(true)),
         };
-
-        let self_clone = self_.clone();
-        thread::spawn(move || handle_incoming(self_clone));
 
         Ok(self_)
     }
@@ -104,30 +69,44 @@ KRpcService<TNodeTable, TSocket> {
         &(*self.node_table)
     }
 
-    /// Get reference to a socket wrapper.
+    /// Receive one package from network.
     ///
-    /// Clone it if you want to get mutable copy.
-    pub fn socket_ref(&self) -> &TSocket {
-        &self.socket
+    /// Blocks until packages is actually received.
+    #[inline]
+    pub fn receive_package(&mut self) ->io::Result<(protocol::Package, net::SocketAddr)> {
+        self.socket.receive()
     }
-}
 
-#[unsafe_destructor]
-impl<TNodeTable: base::GenericNodeTable,
-     TSocket: udpwrapper::GenericSocketWrapper>
-Drop for KRpcService<TNodeTable, TSocket> {
-    fn drop(&mut self) {
-        *self.active.write().unwrap() = false;
+    /// Process a received package.
+    pub fn process_package(&mut self, package: protocol::Package,
+                           sender: net::SocketAddr) -> io::Result<()> {
+        Ok(())  // TODO
+    }
+
+    /// Run dispatching loop forever or until signal is received from another thread.
+    ///
+    /// Value of signal should be 'false' initially, server will exit after
+    /// processing of request if it becomes 'true'.
+    pub fn serve_forever(&mut self, signal: Option<sync::Arc<sync::RwLock<bool>>>) -> io::Result<()> {
+        loop {
+            let (pkg, sender) = try!(self.receive_package());
+            try!(self.process_package(pkg, sender));
+            if let Some(ref sgn) = signal {
+                if *sgn.read().unwrap() {
+                    return Ok(());
+                }
+            }
+        }
     }
 }
 
 #[cfg(test)]
 mod test {
-    use std::old_io::IoResult;
-    use std::old_io::net::ip;
+    use std::io;
+    use std::net;
 
-    use std::num::ToPrimitive;
     use num;
+    use num::ToPrimitive;
 
     use super::super::super::base::{self, GenericNodeTable};
     use super::super::super::utils::test;
@@ -172,13 +151,13 @@ mod test {
 
     impl GenericSocketWrapper for DummySocketWrapper {
         fn send(&mut self, package: &protocol::Package, node: &base::Node)
-            -> IoResult<()> {
+            -> io::Result<()> {
             self.last_package = Some(package.clone());
             self.last_node = Some(node.clone());
             Ok(())
         }
 
-        fn receive(&mut self) -> IoResult<(protocol::Package, ip::SocketAddr)> {
+        fn receive(&mut self) -> io::Result<(protocol::Package, net::SocketAddr)> {
             Ok((self.last_package.as_ref().unwrap().clone(),
                 self.last_node.as_ref().unwrap().address.clone()))
         }
