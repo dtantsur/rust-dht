@@ -19,12 +19,9 @@ use std::ops::BitXor;
 
 use num;
 use num::Zero;
-use num::bigint::RandBigInt;
-use rand;  // FIXME: drop std:: once num 0.1.13 is released
 
 use super::GenericNodeTable;
 use super::base::{Peer};
-use std::time::Duration;
 
 
 // TODO(divius): make public?

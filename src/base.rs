@@ -8,11 +8,11 @@
 //
 
 use std::str::FromStr;
-use std::ops::BitXor;
+//use std::ops::BitXor;
 use std::fmt;
 use std::net::SocketAddr;
-use rand;
-use rand::{ThreadRng,Rng};
+use rand::thread_rng;
+//use rand::{ThreadRng};
 use num::BigUint;
 use num::bigint::RandBigInt;
 
@@ -72,7 +72,7 @@ impl Peer for Node {
     }
     #[inline]
     fn random_id(hash_size : usize) -> num::BigUint {
-        let mut rng = rand::thread_rng();
+        let mut rng = thread_rng();
         rng.gen_biguint(hash_size)
     }
 }

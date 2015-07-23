@@ -19,16 +19,8 @@
 #![crate_name = "dht"]
 #![crate_type = "lib"]
 
-#![feature(core)]
-#![feature(io)]
-#![feature(old_io)]
-#![feature(path)]
-#![feature(old_path)]
-#![feature(collections)]
-#![feature(std_misc)]
 #![feature(slice_patterns)]
 
-#![feature(unsafe_destructor)]
 
 //extern crate bencode;
 extern crate num;
