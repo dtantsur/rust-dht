@@ -4,7 +4,7 @@ name = "dht"
 description = "Implementation of Kademlia-based DHT in Rust"
 version = "0.0.2"
 authors = ["Dmitry Tantsur <divius.inside@gmail.com>"]
-homepage = "https://github.com/divius/rust-dht"
+homepage = "https://github.com/dtantsur/rust-dht"
 readme = "README.md"
 license = "Apache-2.0/MIT"
 
