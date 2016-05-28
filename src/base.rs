@@ -40,6 +40,26 @@ pub struct Node {
     pub id: num::BigUint
 }
 
+/// Trait representing the API.
+pub trait GenericAPI {
+    /// Value type.
+    type TValue: Send + Sync + Clone;
+    /// Ping a node.
+    fn ping<F>(&mut self, node: &Node, callback: F)
+        where F: FnOnce(&Node, bool);
+    /// Return nodes clothest to the given id.
+    fn find_node<F>(&mut self, id: &num::BigUint, callback: F)
+        where F: FnOnce(Vec<Node>);
+    /// Find a value in the network.
+    ///
+    /// Either returns a value or several clothest nodes.
+    fn find_value<F>(&mut self, id: &num::BigUint, callback: F)
+        where F: FnOnce(Option<Self::TValue>, Vec<Node>);
+    /// Store a value on a node.
+    fn store(&mut self, node: &Node, id: &num::BigUint, value: Self::TValue);
+}
+
+
 impl serialize::Encodable for Node {
     fn encode<S:serialize::Encoder> (&self, s: &mut S) -> Result<(), S::Error> {
         s.emit_struct("Node", 2, |s| {
@@ -88,13 +108,12 @@ impl serialize::Decodable for Node {
     }
 }
 
-
 #[cfg(test)]
 mod test {
-    use num::ToPrimitive;
+    use num::{self, ToPrimitive};
     use rustc_serialize::json;
 
-    use super::Node;
+    use super::{GenericAPI, Node};
 
     use super::super::utils::test;
 
@@ -103,6 +122,29 @@ mod test {
     struct SimplifiedNode {
         address: String,
         id: String
+    }
+
+    struct DummyAPI {
+        value: Option<i32>
+    }
+
+    impl GenericAPI for DummyAPI {
+        type TValue = i32;
+        fn ping<F>(&mut self, node: &Node, callback: F)
+                where F: FnOnce(&Node, bool) {
+            callback(node, true);
+        }
+        fn find_node<F>(&mut self, id: &num::BigUint, callback: F)
+                where F: FnOnce(Vec<Node>) {
+            callback(vec![]);
+        }
+        fn find_value<F>(&mut self, id: &num::BigUint, callback: F)
+                where F: FnOnce(Option<Self::TValue>, Vec<Node>) {
+            callback(self.value, vec![]);
+        }
+        fn store(&mut self, node: &Node, id: &num::BigUint, value: Self::TValue) {
+            self.value = Some(value);
+        }
     }
 
     #[test]
@@ -152,5 +194,14 @@ mod test {
         let n2 = json::decode::<Node>(&j.unwrap()).unwrap();
         assert_eq!(n.id, n2.id);
         assert_eq!(n.address, n2.address);
+    }
+
+    #[test]
+    fn test_generic_api() {
+        let mut api = DummyAPI { value: None };
+        let n = test::new_node(42);
+        api.ping(&n, |node, res| {
+            assert!(res);
+        });
     }
 }

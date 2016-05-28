@@ -20,6 +20,8 @@ Currently implemented or have a good progress:
 
 * `Node` struct: endpoint address + ID, representing this Node in the system.
 
+* `GenericAPI` trait: base trait for all protocol implementations.
+
 * `knodetable::KBucket`: k-bucket implementation.
 
 * `knodetable::KNodeTable`: node table with k-buckets.
