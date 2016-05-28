@@ -24,9 +24,3 @@ Currently implemented or have a good progress:
 * `knodetable::KBucket`: k-bucket implementation.
 
 * `knodetable::KNodeTable`: node table with k-buckets.
-
-* `bt::protocol::Package`: network package format for KRPC (BitTorrent DHT RPC).
-
-Just started or stubs:
-
-* `bt::KRpcService`: service for basic KRPC DHT.

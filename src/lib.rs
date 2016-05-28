@@ -31,7 +31,6 @@ pub use base::Node;
 pub use knodetable::KNodeTable;
 
 mod base;
-pub mod bt;
 mod knodetable;
 
 mod utils;
