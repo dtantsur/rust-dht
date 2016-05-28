@@ -2,8 +2,8 @@ rust-dht
 ========
 
 [![Build
-Status](https://travis-ci.org/divius/rust-dht.svg?branch=master)](https://travis-ci.org/divius/rust-dht)
-[Online Documentation](http://divius.net/rust/dht)
+Status](https://travis-ci.org/dtantsur/rust-dht.svg?branch=master)](https://travis-ci.org/dtantsur/rust-dht)
+[Online Documentation](http://dtantsur.net/rust/dht)
 
 A work-in-progress of
 [Kademlia](http://pdos.csail.mit.edu/~petar/papers/maymounkov-kademlia-lncs.pdf)-based

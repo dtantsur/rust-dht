@@ -19,7 +19,6 @@
 #![crate_name = "dht"]
 #![crate_type = "lib"]
 
-extern crate bencode;
 extern crate num;
 #[macro_use]
 extern crate log;
