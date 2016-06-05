@@ -25,3 +25,6 @@ Currently implemented or have a good progress:
 * `knodetable::KBucket`: k-bucket implementation.
 
 * `knodetable::KNodeTable`: node table with k-buckets.
+
+* `service::BaseService`: generic implementation of the receiver side of
+  a service.

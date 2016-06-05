@@ -9,6 +9,8 @@
 
 //! Protocol-agnostic service implementation
 
+use std::collections::HashMap;
+
 use num;
 
 use super::{GenericNodeTable, Node};
@@ -18,26 +20,37 @@ static MAX_NODE_COUNT: usize = 16;
 
 
 /// Service - generic implementation of DHT calls.
-pub struct BaseService<TNodeTable> where TNodeTable: GenericNodeTable {
+pub struct BaseService<TNodeTable, TData>
+        where TNodeTable: GenericNodeTable, TData: Clone {
     table: TNodeTable,
     node_id: num::BigUint,
-    clean_needed: bool
+    clean_needed: bool,
+    data: HashMap<num::BigUint, TData>
+}
+
+#[derive(Debug)]
+pub enum FindResult<TData> {
+    Value(TData),
+    ClosestNodes(Vec<Node>),
+    Nothing
 }
 
 
-impl<TNodeTable> BaseService<TNodeTable> where TNodeTable: GenericNodeTable {
+impl<TNodeTable, TData> BaseService<TNodeTable, TData>
+        where TNodeTable: GenericNodeTable, TData: Clone {
     /// Create a service with a random ID.
-    pub fn new(node_table: TNodeTable) -> BaseService<TNodeTable> {
+    pub fn new(node_table: TNodeTable) -> BaseService<TNodeTable, TData> {
         let node_id = node_table.random_id();
         BaseService::new_with_id(node_table, node_id)
     }
     /// Create a service with a given ID.
     pub fn new_with_id(node_table: TNodeTable, node_id: num::BigUint)
-            -> BaseService<TNodeTable> {
+            -> BaseService<TNodeTable, TData> {
         BaseService {
             table: node_table,
             node_id: node_id,
-            clean_needed: false
+            clean_needed: false,
+            data: HashMap::new()
         }
     }
 
@@ -47,6 +60,12 @@ impl<TNodeTable> BaseService<TNodeTable> where TNodeTable: GenericNodeTable {
     pub fn node_table_mut(&mut self) -> &mut TNodeTable { &mut self.table }
     /// Get the current node ID.
     pub fn node_id(&self) -> &num::BigUint { &self.node_id }
+    /// Get an immutable reference to the data.
+    pub fn stored_data(&self) -> &HashMap<num::BigUint, TData> { &self.data }
+    /// Get an immutable reference to the data.
+    pub fn stored_data_mut(&mut self) -> &mut HashMap<num::BigUint, TData> {
+        &mut self.data
+    }
     /// Check if some buckets are full already.
     pub fn clean_needed(&self) -> bool { self.clean_needed }
 
@@ -61,6 +80,16 @@ impl<TNodeTable> BaseService<TNodeTable> where TNodeTable: GenericNodeTable {
     pub fn find_node(&mut self, sender: &Node, id: &num::BigUint) -> Vec<Node> {
         let res = self.table.find(&id, MAX_NODE_COUNT);
         self.update(sender);
+        res
+    }
+    /// Find a value or the closes nodes.
+    pub fn find_value(&mut self, sender: &Node, id: &num::BigUint)
+            -> FindResult<&TData> {
+        self.update(sender);
+        let res = match self.data.get(&id) {
+            Some(value) => FindResult::Value(value),
+            None => FindResult::ClosestNodes(self.table.find(&id, MAX_NODE_COUNT))
+        };
         res
     }
 
@@ -89,6 +118,15 @@ impl<TNodeTable> BaseService<TNodeTable> where TNodeTable: GenericNodeTable {
     }
 }
 
+impl<TNodeTable> BaseService<TNodeTable, String>
+        where TNodeTable: GenericNodeTable {
+    /// Create a service with random ID and string data.
+    pub fn new_with_strings(node_table: TNodeTable)
+            -> BaseService<TNodeTable, String> {
+        BaseService::new(node_table)
+    }
+}
+
 
 #[cfg(test)]
 pub mod test {
@@ -97,7 +135,7 @@ pub mod test {
     use super::super::{GenericNodeTable, Node};
     use super::super::utils::test;
 
-    use super::BaseService;
+    use super::{BaseService, FindResult};
 
 
     struct DummyNodeTable {
@@ -149,7 +187,8 @@ pub mod test {
     #[test]
     fn test_new() {
         let node_table = DummyNodeTable { node: None };
-        let mut svc = BaseService::new(node_table);
+        let mut svc: BaseService<DummyNodeTable, String> =
+            BaseService::new_with_strings(node_table);
 
         assert_eq!(42, svc.node_id().to_i8().unwrap());
         assert!(svc.node_table().node.is_none());
@@ -160,7 +199,8 @@ pub mod test {
     #[test]
     fn test_find_saves_node() {
         let node_table = DummyNodeTable { node: None };
-        let mut svc = BaseService::new(node_table);
+        let mut svc: BaseService<DummyNodeTable, String> =
+            BaseService::new_with_strings(node_table);
         let node = test::new_node(43);
 
         assert!(svc.find_node(&node, &node.id).is_empty());
@@ -172,7 +212,8 @@ pub mod test {
     #[test]
     fn test_ping_find_clean() {
         let node_table = DummyNodeTable { node: None };
-        let mut svc = BaseService::new(node_table);
+        let mut svc: BaseService<DummyNodeTable, String> =
+            BaseService::new_with_strings(node_table);
         let node = test::new_node(43);
 
         assert!(svc.ping(&node));
@@ -209,5 +250,34 @@ pub mod test {
         assert!(flag);
         assert!(!svc.clean_needed());
         assert!(svc.find_node(&node, &node.id).is_empty());
+    }
+
+    #[test]
+    fn test_ping_find_value() {
+        let node_table = DummyNodeTable { node: None };
+        let mut svc: BaseService<DummyNodeTable, String> =
+            BaseService::new_with_strings(node_table);
+        let node = test::new_node(43);
+        let id1: num::BigUint = FromPrimitive::from_usize(44).unwrap();
+        let id2: num::BigUint = FromPrimitive::from_usize(43).unwrap();
+
+        svc.ping(&node);
+        svc.stored_data_mut().insert(id1.clone(), "foobar".to_string());
+
+        {
+            let res1 = svc.find_value(&node, &id1);
+            match res1 {
+                FindResult::Value(value) => assert_eq!("foobar", value),
+                _ => panic!("wrong result {:?}", res1)
+            }
+        }
+
+        {
+            let res2 = svc.find_value(&node, &id2);
+            match res2 {
+                FindResult::ClosestNodes(nodes) => assert_eq!(1, nodes.len()),
+                _ => panic!("wrong result {:?}", res2)
+            }
+        }
     }
 }
