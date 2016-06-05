@@ -4,9 +4,10 @@ rust-dht
 [![Build
 Status](https://travis-ci.org/dtantsur/rust-dht.svg?branch=master)](https://travis-ci.org/dtantsur/rust-dht)
 
-A work-in-progress of
+A work-in-progress implementation of
 [Kademlia](http://pdos.csail.mit.edu/~petar/papers/maymounkov-kademlia-lncs.pdf)-based
-DHT in Rust language, see documentation for details.
+DHT in Rust language. Unlike other implementations this one is concentrated
+on simplicity and extensibility.
 
 Build
 -----
