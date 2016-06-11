@@ -32,5 +32,6 @@ pub use service::Service;
 
 mod base;
 mod knodetable;
+pub mod protocol;
 mod service;
 mod utils;
