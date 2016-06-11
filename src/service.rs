@@ -20,6 +20,7 @@ use super::{GenericNodeTable, Node};
 static MAX_NODE_COUNT: usize = 16;
 
 
+/// Result of the find operations - either data or nodes closest to it.
 #[derive(Debug)]
 pub enum FindResult<TData> {
     Value(TData),
@@ -37,7 +38,12 @@ pub struct Handler<TNodeTable, TData>
     clean_needed: bool,
 }
 
-/// DHT service.
+/// Protocol agnostic DHT service.
+///
+/// Its type parameters are `TNodeTable` - the node table implementation
+/// (see e.g. `KNodeTable`) and `TData` - stored data type.
+///
+/// The service starts a network listening loop in a separate thread.
 pub struct Service<TNodeTable, TData>
         where TNodeTable: GenericNodeTable,
               TData: Send + Sync + Clone {

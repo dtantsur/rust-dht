@@ -14,7 +14,11 @@
 //!
 //! 1. DHT neighborhood table implementation, will be represented by
 //!    `GenericNodeTable` trait and `KNodeTable` implementation.
-//! 2. Particular implementations, first one is `bt::KRpcService`.
+//! 2. Generic DHT logic implementation in `Service` and `service::Handler`
+//!    structures.
+//! 3. Generic bits for implementing protocols in `service::Handler` structure
+//!    and `protocol` module.
+//! 4. (In the future) simple implementations for testing purposes.
 
 #![crate_name = "dht"]
 #![crate_type = "lib"]

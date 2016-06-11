@@ -6,6 +6,8 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+//! Generic protocol bits for implementing custom protocols.
+
 use num;
 
 use super::Node;
