@@ -72,18 +72,18 @@ impl<TNodeTable, TData> Service<TNodeTable, TData>
     /// Process the ping request.
     ///
     /// Essentially remembers the incoming node and returns true.
-    pub fn ping(&mut self, sender: &Node) -> bool {
+    pub fn on_ping(&mut self, sender: &Node) -> bool {
         self.update(sender);
         true
     }
     /// Process the find request.
-    pub fn find_node(&mut self, sender: &Node, id: &num::BigUint) -> Vec<Node> {
+    pub fn on_find_node(&mut self, sender: &Node, id: &num::BigUint) -> Vec<Node> {
         let res = self.table.find(&id, MAX_NODE_COUNT);
         self.update(sender);
         res
     }
     /// Find a value or the closes nodes.
-    pub fn find_value(&mut self, sender: &Node, id: &num::BigUint)
+    pub fn on_find_value(&mut self, sender: &Node, id: &num::BigUint)
             -> FindResult<&TData> {
         self.update(sender);
         let res = match self.data.get(&id) {
@@ -203,8 +203,8 @@ pub mod test {
             Service::new_with_strings(node_table);
         let node = test::new_node(43);
 
-        assert!(svc.find_node(&node, &node.id).is_empty());
-        let result = svc.find_node(&node, &node.id);
+        assert!(svc.on_find_node(&node, &node.id).is_empty());
+        let result = svc.on_find_node(&node, &node.id);
         assert_eq!(1, result.len());
         assert_eq!(43, result.get(0).unwrap().id.to_i8().unwrap())
     }
@@ -216,15 +216,15 @@ pub mod test {
             Service::new_with_strings(node_table);
         let node = test::new_node(43);
 
-        assert!(svc.ping(&node));
+        assert!(svc.on_ping(&node));
         assert_eq!(43, svc.table.node.as_ref().unwrap().id.to_i8().unwrap());
         assert!(!svc.clean_needed());
 
-        assert!(svc.ping(&test::new_node(44)));
+        assert!(svc.on_ping(&test::new_node(44)));
         assert_eq!(43, svc.table.node.as_ref().unwrap().id.to_i8().unwrap());
         assert!(svc.clean_needed());
 
-        let mut result = svc.find_node(&node, &node.id);
+        let mut result = svc.on_find_node(&node, &node.id);
         assert_eq!(1, result.len());
         assert_eq!(43, result.get(0).unwrap().id.to_i8().unwrap());
 
@@ -237,7 +237,7 @@ pub mod test {
         assert!(flag);
         assert!(!svc.clean_needed());
 
-        result = svc.find_node(&node, &node.id);
+        result = svc.on_find_node(&node, &node.id);
         assert_eq!(1, result.len());
         assert_eq!(43, result.get(0).unwrap().id.to_i8().unwrap());
 
@@ -249,7 +249,7 @@ pub mod test {
         });
         assert!(flag);
         assert!(!svc.clean_needed());
-        assert!(svc.find_node(&node, &node.id).is_empty());
+        assert!(svc.on_find_node(&node, &node.id).is_empty());
     }
 
     #[test]
@@ -261,11 +261,11 @@ pub mod test {
         let id1: num::BigUint = FromPrimitive::from_usize(44).unwrap();
         let id2: num::BigUint = FromPrimitive::from_usize(43).unwrap();
 
-        svc.ping(&node);
+        svc.on_ping(&node);
         svc.stored_data_mut().insert(id1.clone(), "foobar".to_string());
 
         {
-            let res1 = svc.find_value(&node, &id1);
+            let res1 = svc.on_find_value(&node, &id1);
             match res1 {
                 FindResult::Value(value) => assert_eq!("foobar", value),
                 _ => panic!("wrong result {:?}", res1)
@@ -273,7 +273,7 @@ pub mod test {
         }
 
         {
-            let res2 = svc.find_value(&node, &id2);
+            let res2 = svc.on_find_value(&node, &id2);
             match res2 {
                 FindResult::ClosestNodes(nodes) => assert_eq!(1, nodes.len()),
                 _ => panic!("wrong result {:?}", res2)
