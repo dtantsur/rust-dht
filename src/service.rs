@@ -20,7 +20,7 @@ static MAX_NODE_COUNT: usize = 16;
 
 
 /// Service - generic implementation of DHT calls.
-pub struct BaseService<TNodeTable, TData>
+pub struct Service<TNodeTable, TData>
         where TNodeTable: GenericNodeTable, TData: Clone {
     table: TNodeTable,
     node_id: num::BigUint,
@@ -36,17 +36,17 @@ pub enum FindResult<TData> {
 }
 
 
-impl<TNodeTable, TData> BaseService<TNodeTable, TData>
+impl<TNodeTable, TData> Service<TNodeTable, TData>
         where TNodeTable: GenericNodeTable, TData: Clone {
     /// Create a service with a random ID.
-    pub fn new(node_table: TNodeTable) -> BaseService<TNodeTable, TData> {
+    pub fn new(node_table: TNodeTable) -> Service<TNodeTable, TData> {
         let node_id = node_table.random_id();
-        BaseService::new_with_id(node_table, node_id)
+        Service::new_with_id(node_table, node_id)
     }
     /// Create a service with a given ID.
     pub fn new_with_id(node_table: TNodeTable, node_id: num::BigUint)
-            -> BaseService<TNodeTable, TData> {
-        BaseService {
+            -> Service<TNodeTable, TData> {
+        Service {
             table: node_table,
             node_id: node_id,
             clean_needed: false,
@@ -118,12 +118,12 @@ impl<TNodeTable, TData> BaseService<TNodeTable, TData>
     }
 }
 
-impl<TNodeTable> BaseService<TNodeTable, String>
+impl<TNodeTable> Service<TNodeTable, String>
         where TNodeTable: GenericNodeTable {
     /// Create a service with random ID and string data.
     pub fn new_with_strings(node_table: TNodeTable)
-            -> BaseService<TNodeTable, String> {
-        BaseService::new(node_table)
+            -> Service<TNodeTable, String> {
+        Service::new(node_table)
     }
 }
 
@@ -135,7 +135,7 @@ pub mod test {
     use super::super::{GenericNodeTable, Node};
     use super::super::utils::test;
 
-    use super::{BaseService, FindResult};
+    use super::{Service, FindResult};
 
 
     struct DummyNodeTable {
@@ -187,8 +187,8 @@ pub mod test {
     #[test]
     fn test_new() {
         let node_table = DummyNodeTable { node: None };
-        let mut svc: BaseService<DummyNodeTable, String> =
-            BaseService::new_with_strings(node_table);
+        let mut svc: Service<DummyNodeTable, String> =
+            Service::new_with_strings(node_table);
 
         assert_eq!(42, svc.node_id().to_i8().unwrap());
         assert!(svc.node_table().node.is_none());
@@ -199,8 +199,8 @@ pub mod test {
     #[test]
     fn test_find_saves_node() {
         let node_table = DummyNodeTable { node: None };
-        let mut svc: BaseService<DummyNodeTable, String> =
-            BaseService::new_with_strings(node_table);
+        let mut svc: Service<DummyNodeTable, String> =
+            Service::new_with_strings(node_table);
         let node = test::new_node(43);
 
         assert!(svc.find_node(&node, &node.id).is_empty());
@@ -212,8 +212,8 @@ pub mod test {
     #[test]
     fn test_ping_find_clean() {
         let node_table = DummyNodeTable { node: None };
-        let mut svc: BaseService<DummyNodeTable, String> =
-            BaseService::new_with_strings(node_table);
+        let mut svc: Service<DummyNodeTable, String> =
+            Service::new_with_strings(node_table);
         let node = test::new_node(43);
 
         assert!(svc.ping(&node));
@@ -255,8 +255,8 @@ pub mod test {
     #[test]
     fn test_ping_find_value() {
         let node_table = DummyNodeTable { node: None };
-        let mut svc: BaseService<DummyNodeTable, String> =
-            BaseService::new_with_strings(node_table);
+        let mut svc: Service<DummyNodeTable, String> =
+            Service::new_with_strings(node_table);
         let node = test::new_node(43);
         let id1: num::BigUint = FromPrimitive::from_usize(44).unwrap();
         let id2: num::BigUint = FromPrimitive::from_usize(43).unwrap();
