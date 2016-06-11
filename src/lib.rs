@@ -28,10 +28,10 @@ extern crate rustc_serialize;
 pub use base::GenericNodeTable;
 pub use base::Node;
 pub use knodetable::KNodeTable;
-pub use service::Handler;
+pub use service::Service;
 
 mod base;
 mod knodetable;
 pub mod protocol;
-mod service;
+pub mod service;
 mod utils;

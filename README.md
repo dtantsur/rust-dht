@@ -28,3 +28,5 @@ Currently implemented or have a good progress:
 * `knodetable::KNodeTable`: node table with k-buckets.
 
 * `service::Handler`: handler of DHT requests.
+
+* `Service`: main class - DHT service.
