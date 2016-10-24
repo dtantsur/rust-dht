@@ -16,6 +16,16 @@ pub mod test {
     pub fn make_id(i: u8) -> IdType {
         vec![i]
     }
+    /*
+    #[cfg(feature="num")]
+    use num;
+    #[cfg(feature="num")]
+    use num::FromPrimitive;
+
+    pub type IdType = num::BigUint;
+    pub fn make_id(i: u8) -> IdType {
+        FromPrimitive::from_usize(i as usize).unwrap()
+    }*/
 
     pub static ADDR: &'static str = "127.0.0.1:8008";
 

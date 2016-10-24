@@ -7,6 +7,15 @@
 // except according to those terms.
 //
 
+#[cfg(feature="num")]
+use num;
+#[cfg(feature="num")]
+use num::Num;
+#[cfg(feature="num")]
+use num::bigint::RandBigInt;
+#[cfg(feature="num")]
+use core::ops::BitXor;
+
 use rand;
 use rand::Rng;
 
@@ -110,6 +119,38 @@ impl GenericId for Vec<u8> {
     fn decode<D:serialize::Decoder> (d : &mut D) -> Result<Vec<u8>, D::Error> {
         let s = try!(d.read_str());
         match s.from_hex() {
+            Ok(v) => Ok(v),
+            Err(e) => {
+                let err = format!("Expected hex-encoded ID, got {}, error {:?}", s, e);
+                Err(d.error(&err))
+            }
+        }
+    }
+}
+
+#[cfg(feature="num")]
+impl GenericId for num::BigUint {
+    fn bitxor(&self, other: &num::BigUint) -> num::BigUint {
+        BitXor::bitxor(self, other)
+    }
+    fn is_zero(&self) -> bool {
+        num::traits::identities::Zero::is_zero(self)
+    }
+    fn bits(&self) -> usize {
+        num::BigUint::bits(self)
+    }
+    fn gen(bit_size: usize) -> num::BigUint {
+        let mut rng = rand::thread_rng();
+        rng.gen_biguint(bit_size)
+
+    }
+
+    fn encode<S:serialize::Encoder> (&self, s: &mut S) -> Result<(), S::Error> {
+        s.emit_str(&self.to_str_radix(16))
+    }
+    fn decode<D:serialize::Decoder> (d : &mut D) -> Result<Self, D::Error> {
+        let s = try!(d.read_str());
+        match num::BigUint::from_str_radix(&s, 16) {
             Ok(v) => Ok(v),
             Err(e) => {
                 let err = format!("Expected hex-encoded ID, got {}, error {:?}", s, e);
