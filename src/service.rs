@@ -12,9 +12,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
-use num;
-
-use super::{GenericNodeTable, Node};
+use super::{GenericId, GenericNodeTable, Node};
 
 
 static MAX_NODE_COUNT: usize = 16;
@@ -22,19 +20,20 @@ static MAX_NODE_COUNT: usize = 16;
 
 /// Result of the find operations - either data or nodes closest to it.
 #[derive(Debug)]
-pub enum FindResult<TData> {
+pub enum FindResult<TId, TData> {
     Value(TData),
-    ClosestNodes(Vec<Node>),
+    ClosestNodes(Vec<Node<TId>>),
     Nothing
 }
 
 /// Handler - implementation of DHT requests.
-pub struct Handler<TNodeTable, TData>
-        where TNodeTable: GenericNodeTable,
+pub struct Handler<TId, TNodeTable, TData>
+        where TId: GenericId,
+              TNodeTable: GenericNodeTable<TId>,
               TData: Send + Sync + Clone {
-    node_id: num::BigUint,
+    node_id: TId,
     table: Arc<RwLock<TNodeTable>>,
-    data: Arc<RwLock<HashMap<num::BigUint, TData>>>,
+    data: Arc<RwLock<HashMap<TId, TData>>>,
     clean_needed: bool,
 }
 
@@ -44,27 +43,29 @@ pub struct Handler<TNodeTable, TData>
 /// (see e.g. `KNodeTable`) and `TData` - stored data type.
 ///
 /// The service starts a network listening loop in a separate thread.
-pub struct Service<TNodeTable, TData>
-        where TNodeTable: GenericNodeTable,
+pub struct Service<TId, TNodeTable, TData>
+        where TId: GenericId,
+              TNodeTable: GenericNodeTable<TId>,
               TData: Send + Sync + Clone {
-    handler: Handler<TNodeTable, TData>,
-    node_id: num::BigUint,
+    handler: Handler<TId, TNodeTable, TData>,
+    node_id: TId,
     table: Arc<RwLock<TNodeTable>>,
-    data: Arc<RwLock<HashMap<num::BigUint, TData>>>
+    data: Arc<RwLock<HashMap<TId, TData>>>
 }
 
 
-impl<TNodeTable, TData> Service<TNodeTable, TData>
-        where TNodeTable: GenericNodeTable,
+impl<TId, TNodeTable, TData> Service<TId, TNodeTable, TData>
+        where TId: GenericId,
+              TNodeTable: GenericNodeTable<TId>,
               TData: Send + Sync + Clone {
     /// Create a service with a random ID.
-    pub fn new(node_table: TNodeTable) -> Service<TNodeTable, TData> {
+    pub fn new(node_table: TNodeTable) -> Service<TId, TNodeTable, TData> {
         let node_id = node_table.random_id();
         Service::new_with_id(node_table, node_id)
     }
     /// Create a service with a given ID.
-    pub fn new_with_id(node_table: TNodeTable, node_id: num::BigUint)
-            -> Service<TNodeTable, TData> {
+    pub fn new_with_id(node_table: TNodeTable, node_id: TId)
+            -> Service<TId, TNodeTable, TData> {
         let table = Arc::new(RwLock::new(node_table));
         let data = Arc::new(RwLock::new(HashMap::new()));
         let handler = Handler {
@@ -90,17 +91,17 @@ impl<TNodeTable, TData> Service<TNodeTable, TData>
         self.table.write().unwrap()
     }
     /// Get the current node ID.
-    pub fn node_id(&self) -> &num::BigUint {
+    pub fn node_id(&self) -> &TId {
         &self.node_id
     }
     /// Get an immutable reference to the data.
     pub fn stored_data(&self)
-            -> RwLockReadGuard<HashMap<num::BigUint, TData>> {
+            -> RwLockReadGuard<HashMap<TId, TData>> {
         self.data.read().unwrap()
     }
     /// Get an immutable reference to the data.
     pub fn stored_data_mut(&mut self)
-            -> RwLockWriteGuard<HashMap<num::BigUint, TData>> {
+            -> RwLockWriteGuard<HashMap<TId, TData>> {
         self.data.write().unwrap()
     }
     /// Check if some buckets are full already.
@@ -112,7 +113,7 @@ impl<TNodeTable, TData> Service<TNodeTable, TData>
     ///
     /// Should be called periodically, especially when clean_needed is true.
     pub fn clean_up<TCheck>(&mut self, mut check: TCheck)
-            where TCheck: FnMut(&Node) -> bool {
+            where TCheck: FnMut(&Node<TId>) -> bool {
         {
             let mut node_table = self.node_table_mut();
             let oldest = node_table.pop_oldest();
@@ -126,25 +127,26 @@ impl<TNodeTable, TData> Service<TNodeTable, TData>
     }
 }
 
-impl<TNodeTable, TData> Handler<TNodeTable, TData>
-        where TNodeTable: GenericNodeTable,
+impl<TId, TNodeTable, TData> Handler<TId, TNodeTable, TData>
+        where TId: GenericId,
+              TNodeTable: GenericNodeTable<TId>,
               TData: Send + Sync + Clone {
     /// Process the ping request.
     ///
     /// Essentially remembers the incoming node and returns true.
-    pub fn on_ping(&mut self, sender: &Node) -> bool {
+    pub fn on_ping(&mut self, sender: &Node<TId>) -> bool {
         self.update(sender);
         true
     }
     /// Process the find request.
-    pub fn on_find_node(&mut self, sender: &Node, id: &num::BigUint) -> Vec<Node> {
+    pub fn on_find_node(&mut self, sender: &Node<TId>, id: &TId) -> Vec<Node<TId>> {
         let res = self.table.read().unwrap().find(&id, MAX_NODE_COUNT);
         self.update(sender);
         res
     }
     /// Find a value or the closes nodes.
-    pub fn on_find_value(&mut self, sender: &Node, id: &num::BigUint)
-            -> FindResult<TData> {
+    pub fn on_find_value(&mut self, sender: &Node<TId>, id: &TId)
+            -> FindResult<TId, TData> {
         self.update(sender);
         let data = self.data.read().unwrap();
         let table = self.table.read().unwrap();
@@ -155,7 +157,7 @@ impl<TNodeTable, TData> Handler<TNodeTable, TData>
         res
     }
 
-    fn update(&mut self, node: &Node) {
+    fn update(&mut self, node: &Node<TId>) {
         if node.id == self.node_id {
             return
         }
@@ -169,24 +171,23 @@ impl<TNodeTable, TData> Handler<TNodeTable, TData>
 
 #[cfg(test)]
 pub mod test {
-    use num::{self, FromPrimitive, ToPrimitive};
-
     use super::super::{GenericNodeTable, Node};
     use super::super::utils::test;
+    type TestsIdType = test::IdType;
 
     use super::{FindResult, Service};
 
 
     struct DummyNodeTable {
-        pub node: Option<Node>
+        pub node: Option<Node<TestsIdType>>
     }
 
-    impl GenericNodeTable for DummyNodeTable {
-        fn random_id(&self) -> num::BigUint {
-            FromPrimitive::from_usize(42).unwrap()
+    impl GenericNodeTable<TestsIdType> for DummyNodeTable {
+        fn random_id(&self) -> TestsIdType {
+            test::make_id(42)
         }
 
-        fn update(&mut self, node: &Node) -> bool {
+        fn update(&mut self, node: &Node<TestsIdType>) -> bool {
             match self.node {
                 Some(..) => false,
                 None => {
@@ -196,7 +197,7 @@ pub mod test {
             }
         }
 
-        fn find(&self, id: &num::BigUint, _count: usize) -> Vec<Node> {
+        fn find(&self, id: &TestsIdType, _count: usize) -> Vec<Node<TestsIdType>> {
             if let Some(ref node) = self.node {
                 if node.id == *id {
                     vec![node.clone()]
@@ -210,7 +211,7 @@ pub mod test {
             }
         }
 
-        fn pop_oldest(&mut self) -> Vec<Node> {
+        fn pop_oldest(&mut self) -> Vec<Node<TestsIdType>> {
             let result;
             if let Some(ref node) = self.node {
                 result = vec![node.clone()];
@@ -226,10 +227,10 @@ pub mod test {
     #[test]
     fn test_new() {
         let node_table = DummyNodeTable { node: None };
-        let mut svc: Service<DummyNodeTable, String> =
+        let mut svc: Service<TestsIdType, DummyNodeTable, String> =
             Service::new(node_table);
 
-        assert_eq!(42, svc.node_id().to_i8().unwrap());
+        assert_eq!(test::make_id(42), *svc.node_id());
         assert!(svc.node_table().node.is_none());
         assert!(svc.node_table_mut().node.is_none());
         assert!(!svc.clean_needed());
@@ -238,38 +239,38 @@ pub mod test {
     #[test]
     fn test_find_saves_node() {
         let node_table = DummyNodeTable { node: None };
-        let mut svc: Service<DummyNodeTable, String> =
+        let mut svc: Service<TestsIdType, DummyNodeTable, String> =
             Service::new(node_table);
-        let node = test::new_node(43);
+        let node = test::new_node(test::make_id(43));
 
         assert!(svc.handler.on_find_node(&node, &node.id).is_empty());
         let result = svc.handler.on_find_node(&node, &node.id);
         assert_eq!(1, result.len());
-        assert_eq!(43, result.get(0).unwrap().id.to_i8().unwrap())
+        assert_eq!(test::make_id(43), result.get(0).unwrap().id)
     }
 
     #[test]
     fn test_ping_find_clean() {
         let node_table = DummyNodeTable { node: None };
-        let mut svc: Service<DummyNodeTable, String> =
+        let mut svc: Service<TestsIdType, DummyNodeTable, String> =
             Service::new(node_table);
-        let node = test::new_node(43);
+        let node = test::new_node(test::make_id(43));
 
         assert!(svc.handler.on_ping(&node));
-        assert_eq!(43, svc.node_table().node.as_ref().unwrap().id.to_i8().unwrap());
+        assert_eq!(test::make_id(43), svc.node_table().node.as_ref().unwrap().id);
         assert!(!svc.clean_needed());
 
-        assert!(svc.handler.on_ping(&test::new_node(44)));
-        assert_eq!(43, svc.node_table().node.as_ref().unwrap().id.to_i8().unwrap());
+        assert!(svc.handler.on_ping(&test::new_node(test::make_id(44))));
+        assert_eq!(test::make_id(43), svc.node_table().node.as_ref().unwrap().id);
         assert!(svc.clean_needed());
 
         let mut result = svc.handler.on_find_node(&node, &node.id);
         assert_eq!(1, result.len());
-        assert_eq!(43, result.get(0).unwrap().id.to_i8().unwrap());
+        assert_eq!(test::make_id(43), result.get(0).unwrap().id);
 
         let mut flag = false;
         svc.clean_up(|node| {
-            assert_eq!(43, node.id.to_i8().unwrap());
+            assert_eq!(test::make_id(43), node.id);
             flag = true;
             true
         });
@@ -278,11 +279,11 @@ pub mod test {
 
         result = svc.handler.on_find_node(&node, &node.id);
         assert_eq!(1, result.len());
-        assert_eq!(43, result.get(0).unwrap().id.to_i8().unwrap());
+        assert_eq!(test::make_id(43), result.get(0).unwrap().id);
 
         flag = false;
         svc.clean_up(|node| {
-            assert_eq!(43, node.id.to_i8().unwrap());
+            assert_eq!(test::make_id(43), node.id);
             flag = true;
             false
         });
@@ -294,11 +295,11 @@ pub mod test {
     #[test]
     fn test_ping_find_value() {
         let node_table = DummyNodeTable { node: None };
-        let mut svc: Service<DummyNodeTable, String> =
+        let mut svc: Service<TestsIdType, DummyNodeTable, String> =
             Service::new(node_table);
-        let node = test::new_node(43);
-        let id1: num::BigUint = FromPrimitive::from_usize(44).unwrap();
-        let id2: num::BigUint = FromPrimitive::from_usize(43).unwrap();
+        let node = test::new_node(test::make_id(43));
+        let id1: TestsIdType = test::make_id(44);
+        let id2: TestsIdType = test::make_id(43);
 
         svc.handler.on_ping(&node);
         svc.stored_data_mut().insert(id1.clone(), "foobar".to_string());

@@ -5,29 +5,31 @@
 pub mod test {
     use std::net;
 
-    use num;
-    use num::FromPrimitive;
-
     use super::super::Node;
 
+    /*
+    pub type IdType = u64;
+    pub fn make_id(i: u8) -> IdType {
+        i as IdType
+    }*/
+    pub type IdType = Vec<u8>;
+    pub fn make_id(i: u8) -> IdType {
+        vec![i]
+    }
 
     pub static ADDR: &'static str = "127.0.0.1:8008";
 
-    pub fn new_node(id: usize) -> Node {
+    pub fn new_node(id: IdType) -> Node<IdType> {
         new_node_with_port(id, 8008)
     }
 
-    pub fn new_node_with_port(id: usize, port: u16) -> Node {
+    pub fn new_node_with_port(id: IdType, port: u16) -> Node<IdType> {
         Node {
-            id: FromPrimitive::from_usize(id).unwrap(),
+            id: id,
             address: net::SocketAddr::V4(net::SocketAddrV4::new(
                 net::Ipv4Addr::new(127, 0, 0, 1),
                 port
             ))
         }
-    }
-
-    pub fn usize_to_id(id: usize) -> num::BigUint {
-        FromPrimitive::from_usize(id).unwrap()
     }
 }

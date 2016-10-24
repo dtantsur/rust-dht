@@ -8,46 +8,45 @@
 
 //! Generic protocol bits for implementing custom protocols.
 
-use num;
-
-use super::Node;
+use super::{GenericId, Node};
 
 
 /// Payload in the request.
-pub enum RequestPayload<TValue> {
+pub enum RequestPayload<TId, TValue> {
     Ping,
-    FindNode(num::BigUint),
-    FindValue(num::BigUint),
-    Store(num::BigUint, TValue)
+    FindNode(TId),
+    FindValue(TId),
+    Store(TId, TValue)
 }
 
 /// Request structure.
-pub struct Request<TValue> {
-    pub caller: Node,
-    pub request_id: num::BigUint,
-    pub payload: RequestPayload<TValue>
+pub struct Request<TId, TValue> {
+    pub caller: Node<TId>,
+    pub request_id: TId,
+    pub payload: RequestPayload<TId, TValue>
 }
 
 /// Payload in the response.
-pub enum ResponsePayload<TValue> {
-    NodesFound(Vec<Node>),
+pub enum ResponsePayload<TId, TValue> {
+    NodesFound(Vec<Node<TId>>),
     ValueFound(TValue),
     NoResult
 }
 
 /// Response structure.
-pub struct Response<TValue> {
-    pub request: Request<TValue>,
-    pub responder: Node,
-    pub payload: ResponsePayload<TValue>
+pub struct Response<TId, TValue> {
+    pub request: Request<TId, TValue>,
+    pub responder: Node<TId>,
+    pub payload: ResponsePayload<TId, TValue>
 }
 
 /// Trait for a protocol implementation.
 pub trait Protocol : Send {
     /// Value type.
+    type Id: GenericId;
     type Value: Send + Sync;
     /// Parse request from binary data.
-    fn parse_request(&self, data: &[u8]) -> Request<Self::Value>;
+    fn parse_request(&self, data: &[u8]) -> Request<Self::Id, Self::Value>;
     /// Format response to binary data.
-    fn format_response(&self, Response<Self::Value>) -> Vec<u8>;
+    fn format_response(&self, Response<Self::Id, Self::Value>) -> Vec<u8>;
 }
