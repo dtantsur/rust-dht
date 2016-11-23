@@ -23,12 +23,12 @@
 #![crate_name = "dht"]
 #![crate_type = "lib"]
 
-extern crate num;
 #[macro_use]
 extern crate log;
 extern crate rand;
 extern crate rustc_serialize;
 
+pub use base::GenericId;
 pub use base::GenericNodeTable;
 pub use base::Node;
 pub use knodetable::KNodeTable;
