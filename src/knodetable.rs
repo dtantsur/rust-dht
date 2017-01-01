@@ -16,6 +16,7 @@
 
 use std::cmp;
 use std::fmt::Debug;
+use std::collections::VecDeque;
 
 use super::GenericId;
 use super::GenericNodeTable;
@@ -41,7 +42,7 @@ pub struct KNodeTable<TId, TAddr> {
 
 /// K-bucket - structure for keeping last nodes in Kademlia.
 struct KBucket<TId, TAddr> {
-    data: Vec<Node<TId, TAddr>>,
+    data: VecDeque<Node<TId, TAddr>>,
     size: usize,
 }
 
@@ -107,7 +108,7 @@ impl<TId, TAddr> GenericNodeTable<TId, TAddr> for KNodeTable<TId, TAddr>
         // TODO(divius): TTL expiration?
         self.buckets.iter_mut()
             .filter(|b| { !b.data.is_empty() && b.size == b.data.len() })
-            .map(|b| b.data.remove(0))
+            .map(|b| b.data.pop_front().unwrap())
             .collect()
     }
 }
@@ -118,7 +119,7 @@ impl<TId, TAddr> KBucket<TId, TAddr>
     pub fn new(k: usize) -> KBucket<TId, TAddr> {
         assert!(k > 0);
         KBucket {
-            data: Vec::new(),
+            data: VecDeque::new(),
             size: k
         }
     }
@@ -134,7 +135,7 @@ impl<TId, TAddr> KBucket<TId, TAddr>
             false
         }
         else {
-            self.data.push(node.clone());
+            self.data.push_back(node.clone());
             debug!("Added new node {:?} to kbucket", node);
             true
         }
@@ -145,18 +146,18 @@ impl<TId, TAddr> KBucket<TId, TAddr>
             KNodeTable::<TId, TAddr>::distance(id, &a.id)
                 .cmp(&KNodeTable::<TId, TAddr>::distance(id, &b.id))
         };
-        let mut data_copy = self.data.clone();
+        let mut data_copy: Vec<_> = self.data.iter().map(|n| n.clone()).collect();
         data_copy.sort_by(sort_fn);
         data_copy[0..cmp::min(count, data_copy.len())].to_vec()
     }
 
     fn update_position(&mut self, node: Node<TId, TAddr>) {
         // TODO(divius): 1. optimize, 2. make it less ugly
-        let mut new_data = Vec::with_capacity(self.data.len());
+        let mut new_data = VecDeque::with_capacity(self.data.len());
         new_data.extend(self.data.iter()
                         .filter(|x| x.id != node.id)
                         .map(|x| x.clone()));
-        new_data.push(node.clone());
+        new_data.push_back(node.clone());
         self.data = new_data;
     }
 }
