@@ -122,16 +122,16 @@ impl GenericId for Vec<u8> {
 /// Trait representing table with known nodes.
 ///
 /// Keeps some reasonable subset of known nodes passed to `update`.
-pub trait GenericNodeTable<TId> : Send + Sync
+pub trait GenericNodeTable<TId, TAddr> : Send + Sync
         where TId: GenericId {
     /// Generate suitable random ID.
     fn random_id(&self) -> TId;
     /// Store or update node in the table.
-    fn update(&mut self, node: &Node<TId>) -> bool;
+    fn update(&mut self, node: &Node<TId, TAddr>) -> bool;
     /// Find given number of node, closest to given ID.
-    fn find(&self, id: &TId, count: usize) -> Vec<Node<TId>>;
+    fn find(&self, id: &TId, count: usize) -> Vec<Node<TId, TAddr>>;
     /// Pop expired or the oldest nodes from table for inspection.
-    fn pop_oldest(&mut self) -> Vec<Node<TId>>;
+    fn pop_oldest(&mut self) -> Vec<Node<TId, TAddr>>;
 }
 
 /// Structure representing a node in system.
@@ -139,35 +139,34 @@ pub trait GenericNodeTable<TId> : Send + Sync
 /// Every node has an address (IP and port) and a numeric ID, which is
 /// used to calculate metrics and look up data.
 #[derive(Clone, Debug)]
-pub struct Node<TId> {
+pub struct Node<TId, TAddr> {
     /// Network address of the node.
-    pub address: net::SocketAddr,
+    pub address: TAddr,
     /// ID of the node.
     pub id: TId
 }
 
 /// Trait representing the API.
-pub trait GenericAPI<TId>
+pub trait GenericAPI<TId, TAddr>
         where TId: GenericId {
     /// Value type.
     type TValue: Send + Sync + Clone;
     /// Ping a node.
-    fn ping<F>(&mut self, node: &Node<TId>, callback: F)
-        where F: FnOnce(&Node<TId>, bool);
+    fn ping<F>(&mut self, node: &Node<TId, TAddr>, callback: F)
+        where F: FnOnce(&Node<TId, TAddr>, bool);
     /// Return nodes clothest to the given id.
     fn find_node<F>(&mut self, id: &TId, callback: F)
-        where F: FnOnce(Vec<Node<TId>>);
+        where F: FnOnce(Vec<Node<TId, TAddr>>);
     /// Find a value in the network.
     ///
     /// Either returns a value or several clothest nodes.
     fn find_value<F>(&mut self, id: &TId, callback: F)
-        where F: FnOnce(Option<Self::TValue>, Vec<Node<TId>>);
+        where F: FnOnce(Option<Self::TValue>, Vec<Node<TId, TAddr>>);
     /// Store a value on a node.
-    fn store(&mut self, node: &Node<TId>, id: &TId, value: Self::TValue);
+    fn store(&mut self, node: &Node<TId, TAddr>, id: &TId, value: Self::TValue);
 }
 
-
-impl<TId> serialize::Encodable for Node<TId>
+impl<TId> serialize::Encodable for Node<TId, net::SocketAddr>
         where TId: GenericId {
     fn encode<S:serialize::Encoder> (&self, s: &mut S) -> Result<(), S::Error> {
         s.emit_struct("Node", 2, |s| {
@@ -183,9 +182,9 @@ impl<TId> serialize::Encodable for Node<TId>
     }
 }
 
-impl<TId> serialize::Decodable for Node<TId>
+impl<TId> serialize::Decodable for Node<TId, net::SocketAddr>
         where TId: GenericId {
-    fn decode<D:serialize::Decoder> (d : &mut D) -> Result<Node<TId>, D::Error> {
+    fn decode<D:serialize::Decoder> (d : &mut D) -> Result<Node<TId, net::SocketAddr>, D::Error> {
         d.read_struct("Node", 2, |d| {
             let addr = try!(d.read_struct_field("address", 0, |d2| {
                 let s = try!(d2.read_str());
@@ -207,6 +206,7 @@ impl<TId> serialize::Decodable for Node<TId>
 
 #[cfg(test)]
 mod test {
+    use std::net;
     use rustc_serialize::json;
 
     use super::{GenericAPI, Node};
@@ -224,21 +224,21 @@ mod test {
         value: Option<i32>
     }
 
-    impl GenericAPI<TestsIdType> for DummyAPI {
+    impl GenericAPI<TestsIdType, net::SocketAddr> for DummyAPI {
         type TValue = i32;
-        fn ping<F>(&mut self, node: &Node<TestsIdType>, callback: F)
-                where F: FnOnce(&Node<TestsIdType>, bool) {
+        fn ping<F>(&mut self, node: &Node<TestsIdType, net::SocketAddr>, callback: F)
+                where F: FnOnce(&Node<TestsIdType, net::SocketAddr>, bool) {
             callback(node, true);
         }
         fn find_node<F>(&mut self, _id: &TestsIdType, callback: F)
-                where F: FnOnce(Vec<Node<TestsIdType>>) {
+                where F: FnOnce(Vec<Node<TestsIdType, net::SocketAddr>>) {
             callback(vec![]);
         }
         fn find_value<F>(&mut self, _id: &TestsIdType, callback: F)
-                where F: FnOnce(Option<Self::TValue>, Vec<Node<TestsIdType>>) {
+                where F: FnOnce(Option<Self::TValue>, Vec<Node<TestsIdType, net::SocketAddr>>) {
             callback(self.value, vec![]);
         }
-        fn store(&mut self, _node: &Node<TestsIdType>, _id: &TestsIdType, value: Self::TValue) {
+        fn store(&mut self, _node: &Node<TestsIdType, net::SocketAddr>, _id: &TestsIdType, value: Self::TValue) {
             self.value = Some(value);
         }
     }
@@ -259,7 +259,7 @@ mod test {
             id: "2a".to_string()
         };
         let j = json::encode(&sn);
-        let n: Node<TestsIdType> = json::decode(&j.unwrap()).unwrap();
+        let n: Node<TestsIdType, net::SocketAddr> = json::decode(&j.unwrap()).unwrap();
         assert_eq!(test::make_id(42), n.id);
     }
 
@@ -270,7 +270,7 @@ mod test {
             id: "2a".to_string()
         };
         let j = json::encode(&sn);
-        assert!(json::decode::<Node<TestsIdType>>(&j.unwrap()).is_err());
+        assert!(json::decode::<Node<TestsIdType, net::SocketAddr>>(&j.unwrap()).is_err());
     }
 
     #[test]
@@ -280,14 +280,14 @@ mod test {
             id: "x42".to_string()
         };
         let j = json::encode(&sn);
-        assert!(json::decode::<Node<TestsIdType>>(&j.unwrap()).is_err());
+        assert!(json::decode::<Node<TestsIdType, net::SocketAddr>>(&j.unwrap()).is_err());
     }
 
     #[test]
     fn test_node_encode_decode() {
         let n = test::new_node(test::make_id(42));
         let j = json::encode(&n);
-        let n2 = json::decode::<Node<TestsIdType>>(&j.unwrap()).unwrap();
+        let n2 = json::decode::<Node<TestsIdType, net::SocketAddr>>(&j.unwrap()).unwrap();
         assert_eq!(n.id, n2.id);
         assert_eq!(n.address, n2.address);
     }

@@ -19,11 +19,11 @@ pub mod test {
 
     pub static ADDR: &'static str = "127.0.0.1:8008";
 
-    pub fn new_node(id: IdType) -> Node<IdType> {
+    pub fn new_node(id: IdType) -> Node<IdType, net::SocketAddr> {
         new_node_with_port(id, 8008)
     }
 
-    pub fn new_node_with_port(id: IdType, port: u16) -> Node<IdType> {
+    pub fn new_node_with_port(id: IdType, port: u16) -> Node<IdType, net::SocketAddr> {
         Node {
             id: id,
             address: net::SocketAddr::V4(net::SocketAddrV4::new(

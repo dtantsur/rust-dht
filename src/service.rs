@@ -9,6 +9,7 @@
 
 //! Protocol-agnostic service implementation
 
+use std::marker;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
@@ -20,17 +21,18 @@ static MAX_NODE_COUNT: usize = 16;
 
 /// Result of the find operations - either data or nodes closest to it.
 #[derive(Debug)]
-pub enum FindResult<TId, TData> {
+pub enum FindResult<TId, TAddr, TData> {
     Value(TData),
-    ClosestNodes(Vec<Node<TId>>),
+    ClosestNodes(Vec<Node<TId, TAddr>>),
     Nothing
 }
 
 /// Handler - implementation of DHT requests.
-pub struct Handler<TId, TNodeTable, TData>
+pub struct Handler<TId, TAddr, TNodeTable, TData>
         where TId: GenericId,
-              TNodeTable: GenericNodeTable<TId>,
+              TNodeTable: GenericNodeTable<TId, TAddr>,
               TData: Send + Sync + Clone {
+    _phantom: marker::PhantomData<TAddr>,
     node_id: TId,
     table: Arc<RwLock<TNodeTable>>,
     data: Arc<RwLock<HashMap<TId, TData>>>,
@@ -43,32 +45,34 @@ pub struct Handler<TId, TNodeTable, TData>
 /// (see e.g. `KNodeTable`) and `TData` - stored data type.
 ///
 /// The service starts a network listening loop in a separate thread.
-pub struct Service<TId, TNodeTable, TData>
+pub struct Service<TId, TAddr, TNodeTable, TData>
         where TId: GenericId,
-              TNodeTable: GenericNodeTable<TId>,
+              TNodeTable: GenericNodeTable<TId, TAddr>,
               TData: Send + Sync + Clone {
-    handler: Handler<TId, TNodeTable, TData>,
+    handler: Handler<TId, TAddr, TNodeTable, TData>,
     node_id: TId,
     table: Arc<RwLock<TNodeTable>>,
     data: Arc<RwLock<HashMap<TId, TData>>>
 }
 
 
-impl<TId, TNodeTable, TData> Service<TId, TNodeTable, TData>
+impl<TId, TAddr, TNodeTable, TData> Service<TId, TAddr, TNodeTable, TData>
         where TId: GenericId,
-              TNodeTable: GenericNodeTable<TId>,
+              TAddr: Send + Sync,
+              TNodeTable: GenericNodeTable<TId, TAddr>,
               TData: Send + Sync + Clone {
     /// Create a service with a random ID.
-    pub fn new(node_table: TNodeTable) -> Service<TId, TNodeTable, TData> {
+    pub fn new(node_table: TNodeTable) -> Service<TId, TAddr, TNodeTable, TData> {
         let node_id = node_table.random_id();
         Service::new_with_id(node_table, node_id)
     }
     /// Create a service with a given ID.
     pub fn new_with_id(node_table: TNodeTable, node_id: TId)
-            -> Service<TId, TNodeTable, TData> {
+            -> Service<TId, TAddr, TNodeTable, TData> {
         let table = Arc::new(RwLock::new(node_table));
         let data = Arc::new(RwLock::new(HashMap::new()));
         let handler = Handler {
+            _phantom: marker::PhantomData,
             node_id: node_id.clone(),
             table: table.clone(),
             data: data.clone(),
@@ -113,7 +117,7 @@ impl<TId, TNodeTable, TData> Service<TId, TNodeTable, TData>
     ///
     /// Should be called periodically, especially when clean_needed is true.
     pub fn clean_up<TCheck>(&mut self, mut check: TCheck)
-            where TCheck: FnMut(&Node<TId>) -> bool {
+            where TCheck: FnMut(&Node<TId, TAddr>) -> bool {
         {
             let mut node_table = self.node_table_mut();
             let oldest = node_table.pop_oldest();
@@ -127,26 +131,26 @@ impl<TId, TNodeTable, TData> Service<TId, TNodeTable, TData>
     }
 }
 
-impl<TId, TNodeTable, TData> Handler<TId, TNodeTable, TData>
+impl<TId, TAddr, TNodeTable, TData> Handler<TId, TAddr, TNodeTable, TData>
         where TId: GenericId,
-              TNodeTable: GenericNodeTable<TId>,
+              TNodeTable: GenericNodeTable<TId, TAddr>,
               TData: Send + Sync + Clone {
     /// Process the ping request.
     ///
     /// Essentially remembers the incoming node and returns true.
-    pub fn on_ping(&mut self, sender: &Node<TId>) -> bool {
+    pub fn on_ping(&mut self, sender: &Node<TId, TAddr>) -> bool {
         self.update(sender);
         true
     }
     /// Process the find request.
-    pub fn on_find_node(&mut self, sender: &Node<TId>, id: &TId) -> Vec<Node<TId>> {
+    pub fn on_find_node(&mut self, sender: &Node<TId, TAddr>, id: &TId) -> Vec<Node<TId, TAddr>> {
         let res = self.table.read().unwrap().find(&id, MAX_NODE_COUNT);
         self.update(sender);
         res
     }
     /// Find a value or the closes nodes.
-    pub fn on_find_value(&mut self, sender: &Node<TId>, id: &TId)
-            -> FindResult<TId, TData> {
+    pub fn on_find_value(&mut self, sender: &Node<TId, TAddr>, id: &TId)
+            -> FindResult<TId, TAddr, TData> {
         self.update(sender);
         let data = self.data.read().unwrap();
         let table = self.table.read().unwrap();
@@ -157,7 +161,7 @@ impl<TId, TNodeTable, TData> Handler<TId, TNodeTable, TData>
         res
     }
 
-    fn update(&mut self, node: &Node<TId>) {
+    fn update(&mut self, node: &Node<TId, TAddr>) {
         if node.id == self.node_id {
             return
         }
@@ -171,6 +175,7 @@ impl<TId, TNodeTable, TData> Handler<TId, TNodeTable, TData>
 
 #[cfg(test)]
 pub mod test {
+    use std::net;
     use super::super::{GenericNodeTable, Node};
     use super::super::utils::test;
     type TestsIdType = test::IdType;
@@ -179,15 +184,15 @@ pub mod test {
 
 
     struct DummyNodeTable {
-        pub node: Option<Node<TestsIdType>>
+        pub node: Option<Node<TestsIdType, net::SocketAddr>>
     }
 
-    impl GenericNodeTable<TestsIdType> for DummyNodeTable {
+    impl GenericNodeTable<TestsIdType, net::SocketAddr> for DummyNodeTable {
         fn random_id(&self) -> TestsIdType {
             test::make_id(42)
         }
 
-        fn update(&mut self, node: &Node<TestsIdType>) -> bool {
+        fn update(&mut self, node: &Node<TestsIdType, net::SocketAddr>) -> bool {
             match self.node {
                 Some(..) => false,
                 None => {
@@ -197,7 +202,7 @@ pub mod test {
             }
         }
 
-        fn find(&self, id: &TestsIdType, _count: usize) -> Vec<Node<TestsIdType>> {
+        fn find(&self, id: &TestsIdType, _count: usize) -> Vec<Node<TestsIdType, net::SocketAddr>> {
             if let Some(ref node) = self.node {
                 if node.id == *id {
                     vec![node.clone()]
@@ -211,7 +216,7 @@ pub mod test {
             }
         }
 
-        fn pop_oldest(&mut self) -> Vec<Node<TestsIdType>> {
+        fn pop_oldest(&mut self) -> Vec<Node<TestsIdType, net::SocketAddr>> {
             let result;
             if let Some(ref node) = self.node {
                 result = vec![node.clone()];
@@ -227,7 +232,7 @@ pub mod test {
     #[test]
     fn test_new() {
         let node_table = DummyNodeTable { node: None };
-        let mut svc: Service<TestsIdType, DummyNodeTable, String> =
+        let mut svc: Service<TestsIdType, net::SocketAddr, DummyNodeTable, String> =
             Service::new(node_table);
 
         assert_eq!(test::make_id(42), *svc.node_id());
@@ -239,7 +244,7 @@ pub mod test {
     #[test]
     fn test_find_saves_node() {
         let node_table = DummyNodeTable { node: None };
-        let mut svc: Service<TestsIdType, DummyNodeTable, String> =
+        let mut svc: Service<TestsIdType, net::SocketAddr, DummyNodeTable, String> =
             Service::new(node_table);
         let node = test::new_node(test::make_id(43));
 
@@ -252,7 +257,7 @@ pub mod test {
     #[test]
     fn test_ping_find_clean() {
         let node_table = DummyNodeTable { node: None };
-        let mut svc: Service<TestsIdType, DummyNodeTable, String> =
+        let mut svc: Service<TestsIdType, net::SocketAddr, DummyNodeTable, String> =
             Service::new(node_table);
         let node = test::new_node(test::make_id(43));
 
@@ -295,7 +300,7 @@ pub mod test {
     #[test]
     fn test_ping_find_value() {
         let node_table = DummyNodeTable { node: None };
-        let mut svc: Service<TestsIdType, DummyNodeTable, String> =
+        let mut svc: Service<TestsIdType, net::SocketAddr, DummyNodeTable, String> =
             Service::new(node_table);
         let node = test::new_node(test::make_id(43));
         let id1: TestsIdType = test::make_id(44);
