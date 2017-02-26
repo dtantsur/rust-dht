@@ -44,7 +44,7 @@ pub struct KNodeTable<TId, TAddr> {
 }
 
 /// K-bucket - structure for keeping last nodes in Kademlia.
-struct KBucket<TId, TAddr> {
+pub struct KBucket<TId, TAddr> {
     data: VecDeque<Node<TId, TAddr>>,
     size: usize,
 }
@@ -68,6 +68,10 @@ impl<TId, TAddr> KNodeTable<TId, TAddr>
             buckets: (0..hash_size).map(
                               |_| KBucket::new(bucket_size)).collect(),
         }
+    }
+
+    pub fn buckets(&self) -> &Vec<KBucket<TId, TAddr>> {
+        &self.buckets
     }
 
     #[inline]
@@ -158,6 +162,13 @@ impl<TId, TAddr> KBucket<TId, TAddr>
         data_copy[0..cmp::min(count, data_copy.len())].to_vec()
     }
 
+    pub fn data(&self) -> &VecDeque<Node<TId, TAddr>> {
+        &self.data
+    }
+    pub fn size(&self) -> usize {
+        self.size
+    }
+
     fn update_position(&mut self, node: Node<TId, TAddr>) {
         // TODO(divius): 1. optimize, 2. make it less ugly
         let mut new_data = VecDeque::with_capacity(self.data.len());
@@ -219,18 +230,20 @@ mod test {
     fn test_nodetable_pop_oldest() {
         let mut n = KNodeTable::<TestsIdType, net::SocketAddr>::new_with_details(
             test::make_id(42), 2, DEFAULT_HASH_SIZE);
+        let mut lengths = vec![0; n.hash_size];
+
         n.update(&test::new_node(test::make_id(41)));
         n.update(&test::new_node(test::make_id(43)));
         n.update(&test::new_node(test::make_id(40)));
-        assert_eq!(0, n.buckets[2].data.len());
-        assert_eq!(2, n.buckets[1].data.len());
-        assert_eq!(1, n.buckets[0].data.len());
+        lengths[0] = 1;
+        lengths[1] = 2;
+        assert_eq!(n.buckets().iter().map(|b| b.data.len()).collect::<Vec<_>>(), lengths);
+
         let nodes = n.pop_oldest();
         assert_eq!(1, nodes.len());
         assert_eq!(test::make_id(41), nodes[0].id);
-        assert_eq!(0, n.buckets[2].data.len());
-        assert_eq!(1, n.buckets[1].data.len());
-        assert_eq!(1, n.buckets[0].data.len());
+        lengths[1] = 1;
+        assert_eq!(n.buckets().iter().map(|b| b.data.len()).collect::<Vec<_>>(), lengths);
         assert_eq!(test::make_id(40), n.buckets[1].data[0].id);
     }
 
