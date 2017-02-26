@@ -33,6 +33,9 @@ static HASH_SIZE: usize = 64;
 /// Keeps nodes in a number of k-buckets (equal to bit size of ID in a system,
 /// usually 160), where N-th k-bucket contains nodes with distance
 /// from 2^N to 2^(N+1) from our node.
+///
+/// methods may panic if distance between two ids is greater than the
+/// `hash_size`.
 pub struct KNodeTable<TId, TAddr> {
     this_id: TId,
     hash_size: usize,
@@ -77,6 +80,11 @@ impl<TId, TAddr> KNodeTable<TId, TAddr>
         let diff = KNodeTable::<TId, TAddr>::distance(&self.this_id, id);
         debug_assert!(!diff.is_zero());
         let res = diff.bits() - 1;
+        if res >= self.hash_size {
+            panic!(format!("Distance between IDs {:?} and {:?} is {:?}, which is \
+                    greater than the hash size ({:?})",
+                    id, self.this_id, res, self.hash_size));
+        }
         debug!("ID {:?} relative to own ID {:?} falls into bucket {:?}",
                id, self.this_id, res);
         res
@@ -238,6 +246,21 @@ mod test {
         let id = test::make_id(3);
         assert_node_list_eq(&[&n.buckets[1].data[2]],
                             &n.find(&id, 1));
+    }
+
+    #[test]
+    #[should_panic(expected = "greater than the hash size")]
+    fn test_nodetable_find_overflow() {
+        let mut id1 = Vec::with_capacity(HASH_SIZE/8);
+        let mut id2 = Vec::with_capacity(HASH_SIZE/8);
+        id1.push(0);
+        id2.push(255);
+        for _ in 0..(HASH_SIZE/8) {
+            id1.push(0);
+            id2.push(0);
+        }
+        let n = KNodeTable::<_, ()>::new(id1);
+        n.find(&id2, 1);
     }
 
     #[test]
