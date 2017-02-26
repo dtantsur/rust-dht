@@ -25,7 +25,7 @@ use super::Node;
 
 // TODO(divius): make public?
 static BUCKET_SIZE: usize = 32;
-static HASH_SIZE: usize = 64;
+static DEFAULT_HASH_SIZE: usize = 64;
 
 
 /// Kademlia node table.
@@ -57,11 +57,10 @@ impl<TId, TAddr> KNodeTable<TId, TAddr>
     ///
     /// `this_id` -- ID of the current node (used to calculate metrics).
     pub fn new(this_id: TId) -> KNodeTable<TId, TAddr> {
-        KNodeTable::with_details(this_id, BUCKET_SIZE, HASH_SIZE)
+        KNodeTable::new_with_details(this_id, BUCKET_SIZE, DEFAULT_HASH_SIZE)
     }
 
-    // TODO(divius): make public?
-    fn with_details(this_id: TId, bucket_size: usize,
+    pub fn new_with_details(this_id: TId, bucket_size: usize,
                     hash_size: usize) -> KNodeTable<TId, TAddr> {
         KNodeTable {
             this_id: this_id,
@@ -178,7 +177,7 @@ mod test {
     use super::super::GenericNodeTable;
     use super::super::Node;
 
-    use super::HASH_SIZE;
+    use super::DEFAULT_HASH_SIZE;
     use super::KBucket;
     use super::KNodeTable;
 
@@ -205,7 +204,7 @@ mod test {
     #[test]
     fn test_nodetable_new() {
         let n = KNodeTable::<u64, ()>::new(42);
-        assert_eq!(HASH_SIZE, n.buckets.len());
+        assert_eq!(DEFAULT_HASH_SIZE, n.buckets.len());
     }
 
     #[test]
@@ -218,8 +217,8 @@ mod test {
 
     #[test]
     fn test_nodetable_pop_oldest() {
-        let mut n = KNodeTable::<TestsIdType, net::SocketAddr>::with_details(
-            test::make_id(42), 2, HASH_SIZE);
+        let mut n = KNodeTable::<TestsIdType, net::SocketAddr>::new_with_details(
+            test::make_id(42), 2, DEFAULT_HASH_SIZE);
         n.update(&test::new_node(test::make_id(41)));
         n.update(&test::new_node(test::make_id(43)));
         n.update(&test::new_node(test::make_id(40)));
@@ -240,7 +239,7 @@ mod test {
         let n = KNodeTable {
             buckets: vec![prepare(1), prepare(3), prepare(1)],
             this_id: test::make_id(0),
-            hash_size: HASH_SIZE,
+            hash_size: DEFAULT_HASH_SIZE,
         };
         // 0 xor 3 = 3, 1 xor 3 = 2, 2 xor 3 = 1
         let id = test::make_id(3);
@@ -251,11 +250,11 @@ mod test {
     #[test]
     #[should_panic(expected = "greater than the hash size")]
     fn test_nodetable_find_overflow() {
-        let mut id1 = Vec::with_capacity(HASH_SIZE/8);
-        let mut id2 = Vec::with_capacity(HASH_SIZE/8);
+        let mut id1 = Vec::with_capacity(DEFAULT_HASH_SIZE/8);
+        let mut id2 = Vec::with_capacity(DEFAULT_HASH_SIZE/8);
         id1.push(0);
         id2.push(255);
-        for _ in 0..(HASH_SIZE/8) {
+        for _ in 0..(DEFAULT_HASH_SIZE/8) {
             id1.push(0);
             id2.push(0);
         }
@@ -265,8 +264,8 @@ mod test {
 
     #[test]
     fn test_nodetable_update() {
-        let mut n = KNodeTable::with_details(
-            test::make_id(42), 1, HASH_SIZE);
+        let mut n = KNodeTable::new_with_details(
+            test::make_id(42), 1, DEFAULT_HASH_SIZE);
         let node = test::new_node(test::make_id(41));
         n.update(&node);
         assert_eq!(1, n.buckets[1].data.len());
@@ -276,10 +275,10 @@ mod test {
 
     #[test]
     fn test_nodetable_random_id() {
-        let n = KNodeTable::<u64, ()>::with_details(
-            42, 1, HASH_SIZE);
+        let n = KNodeTable::<u64, ()>::new_with_details(
+            42, 1, DEFAULT_HASH_SIZE);
         for _ in 0..100 {
-            assert!(n.random_id().bits() <= HASH_SIZE);
+            assert!(n.random_id().bits() <= DEFAULT_HASH_SIZE);
         }
         assert!(n.random_id() != n.random_id());
     }
