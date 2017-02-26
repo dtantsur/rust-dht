@@ -110,8 +110,10 @@ impl<TId, TAddr> GenericNodeTable<TId, TAddr> for KNodeTable<TId, TAddr>
     fn find(&self, id: &TId, count: usize) -> Vec<Node<TId, TAddr>> {
         debug_assert!(count > 0);
         assert!(*id != self.this_id);
-        let bucket = self.bucket_number(id);
-        self.buckets[bucket].find(id, count)
+
+        let mut data_copy: Vec<_> = self.buckets.iter().flat_map(|b| &b.data).map(|n| n.clone()).collect();
+        data_copy.sort_by_key(|n| KNodeTable::<TId, TAddr>::distance(id, &n.id));
+        data_copy[0..cmp::min(count, data_copy.len())].to_vec()
     }
 
     fn pop_oldest(&mut self) -> Vec<Node<TId, TAddr>> {
@@ -153,12 +155,8 @@ impl<TId, TAddr> KBucket<TId, TAddr>
     }
 
     pub fn find(&self, id: &TId, count: usize) -> Vec<Node<TId, TAddr>> {
-        let sort_fn = |a: &Node<TId, TAddr>, b: &Node<TId, TAddr>| {
-            KNodeTable::<TId, TAddr>::distance(id, &a.id)
-                .cmp(&KNodeTable::<TId, TAddr>::distance(id, &b.id))
-        };
         let mut data_copy: Vec<_> = self.data.iter().map(|n| n.clone()).collect();
-        data_copy.sort_by(sort_fn);
+        data_copy.sort_by_key(|n| KNodeTable::<TId, TAddr>::distance(id, &n.id));
         data_copy[0..cmp::min(count, data_copy.len())].to_vec()
     }
 
@@ -271,8 +269,21 @@ mod test {
             id1.push(0);
             id2.push(0);
         }
-        let n = KNodeTable::<_, ()>::new(id1);
-        n.find(&id2, 1);
+        let mut n = KNodeTable::new(id1);
+        n.update(&test::new_node(id2));
+    }
+
+    #[test]
+    fn test_nodetable_find_closest() {
+        let mut n = KNodeTable::new(test::make_id(0b0000));
+        let node1 = test::new_node(test::make_id(0b0101));
+        let node2 = test::new_node(test::make_id(0b1010));
+        let node3 = test::new_node(test::make_id(0b1110));
+        assert!(n.update(&node1));
+        assert!(n.update(&node2));
+        assert!(n.update(&node3));
+        assert_node_list_eq(&vec![&node3], &n.find(&test::make_id(0b1111), 1));
+        assert_node_list_eq(&vec![&node2], &n.find(&test::make_id(0b1011), 1));
     }
 
     #[test]
