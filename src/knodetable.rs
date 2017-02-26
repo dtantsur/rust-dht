@@ -70,6 +70,10 @@ impl<TId, TAddr> KNodeTable<TId, TAddr>
         }
     }
 
+    pub fn bucket_lengths(&self) -> Vec<usize> {
+        self.buckets.iter().map(|b| b.data.len()).collect()
+    }
+
     #[inline]
     fn distance(id1: &TId, id2: &TId) -> TId {
         id1.bitxor(id2)
@@ -219,18 +223,20 @@ mod test {
     fn test_nodetable_pop_oldest() {
         let mut n = KNodeTable::<TestsIdType, net::SocketAddr>::new_with_details(
             test::make_id(42), 2, DEFAULT_HASH_SIZE);
+        let mut lengths = vec![0; n.hash_size];
+
         n.update(&test::new_node(test::make_id(41)));
         n.update(&test::new_node(test::make_id(43)));
         n.update(&test::new_node(test::make_id(40)));
-        assert_eq!(0, n.buckets[2].data.len());
-        assert_eq!(2, n.buckets[1].data.len());
-        assert_eq!(1, n.buckets[0].data.len());
+        lengths[0] = 1;
+        lengths[1] = 2;
+        assert_eq!(n.bucket_lengths(), lengths);
+
         let nodes = n.pop_oldest();
         assert_eq!(1, nodes.len());
         assert_eq!(test::make_id(41), nodes[0].id);
-        assert_eq!(0, n.buckets[2].data.len());
-        assert_eq!(1, n.buckets[1].data.len());
-        assert_eq!(1, n.buckets[0].data.len());
+        lengths[1] = 1;
+        assert_eq!(n.bucket_lengths(), lengths);
         assert_eq!(test::make_id(40), n.buckets[1].data[0].id);
     }
 
