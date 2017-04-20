@@ -1,5 +1,5 @@
 language: rust
 script:
-    - cargo build --verbose
+    - cargo build --features "num" --verbose
     - cargo test --verbose
     - cargo doc --no-deps --verbose
