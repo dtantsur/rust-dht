@@ -44,7 +44,7 @@ impl GenericId for u64 {
     fn gen(bit_size: usize) -> u64 {
         assert!(bit_size <= 64);
         if bit_size == 64 {
-            rand::thread_rng().next_u64()
+            rand::thread_rng().gen()
         } else {
             rand::thread_rng().gen_range(0, 1 << bit_size)
         }
@@ -93,13 +93,13 @@ impl GenericId for Vec<u8> {
         let mut rng = rand::thread_rng();
         if nb_bits_partial_digit == 0 {
             let mut res = vec![0u8; nb_full_digits];
-            rng.fill_bytes(&mut res);
+            rng.fill(&mut res[..]);
             res
         } else {
             let mut res = vec![0u8; nb_full_digits + 1];
             let first_digit = rng.gen_range(0, 1 << (nb_bits_partial_digit - 1));
             res[0] = first_digit;
-            rng.fill_bytes(&mut res[1..nb_full_digits + 1]);
+            rng.fill(&mut res[1..nb_full_digits + 1]);
             res
         }
     }
