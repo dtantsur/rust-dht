@@ -10,38 +10,37 @@
 
 use super::{GenericId, Node};
 
-
 /// Payload in the request.
 pub enum RequestPayload<TId, TValue> {
     Ping,
     FindNode(TId),
     FindValue(TId),
-    Store(TId, TValue)
+    Store(TId, TValue),
 }
 
 /// Request structure.
 pub struct Request<TId, TAddr, TValue> {
     pub caller: Node<TId, TAddr>,
     pub request_id: TId,
-    pub payload: RequestPayload<TId, TValue>
+    pub payload: RequestPayload<TId, TValue>,
 }
 
 /// Payload in the response.
 pub enum ResponsePayload<TId, TAddr, TValue> {
     NodesFound(Vec<Node<TId, TAddr>>),
     ValueFound(TValue),
-    NoResult
+    NoResult,
 }
 
 /// Response structure.
 pub struct Response<TId, TAddr, TValue> {
     pub request: Request<TId, TAddr, TValue>,
     pub responder: Node<TId, TAddr>,
-    pub payload: ResponsePayload<TId, TAddr, TValue>
+    pub payload: ResponsePayload<TId, TAddr, TValue>,
 }
 
 /// Trait for a protocol implementation.
-pub trait Protocol : Send {
+pub trait Protocol: Send {
     /// Value type.
     type Id: GenericId;
     type Addr: Send + Sync;
