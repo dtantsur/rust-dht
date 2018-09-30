@@ -1,6 +1,5 @@
 //! Various utilities
 
-
 #[cfg(test)]
 pub mod test {
     use std::net;
@@ -28,8 +27,8 @@ pub mod test {
             id: id,
             address: net::SocketAddr::V4(net::SocketAddrV4::new(
                 net::Ipv4Addr::new(127, 0, 0, 1),
-                port
-            ))
+                port,
+            )),
         }
     }
 }
