@@ -10,7 +10,7 @@ license = "Apache-2.0/MIT"
 
 [dependencies]
 
-log = "^0.3"
+log = "^0.4"
 rand = "^0.3"
 rustc-serialize = "^0.3"
 
