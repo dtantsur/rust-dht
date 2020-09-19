@@ -54,7 +54,7 @@ impl GenericId for u64 {
         s.emit_str(&format!("{:x}", self))
     }
     fn decode<D: serialize::Decoder>(d: &mut D) -> Result<u64, D::Error> {
-        let s: &str = &try!(d.read_str());
+        let s: &str = &d.read_str()?;
         match u64::from_str_radix(s, 16) {
             Ok(v) => Ok(v),
             Err(e) => {
@@ -108,7 +108,7 @@ impl GenericId for Vec<u8> {
         s.emit_str(&self.to_hex())
     }
     fn decode<D: serialize::Decoder>(d: &mut D) -> Result<Vec<u8>, D::Error> {
-        let s = try!(d.read_str());
+        let s = d.read_str()?;
         match s.from_hex() {
             Ok(v) => Ok(v),
             Err(e) => {
@@ -179,12 +179,12 @@ where
 {
     fn encode<S: serialize::Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         s.emit_struct("Node", 2, |s| {
-            try!(s.emit_struct_field("address", 0, |s2| {
+            s.emit_struct_field("address", 0, |s2| {
                 let addr = format!("{}", self.address);
                 addr.encode(s2)
-            }));
+            })?;
 
-            try!(s.emit_struct_field("id", 1, |s2| self.id.encode(s2)));
+            s.emit_struct_field("id", 1, |s2| self.id.encode(s2))?;
 
             Ok(())
         })
@@ -197,8 +197,8 @@ where
 {
     fn decode<D: serialize::Decoder>(d: &mut D) -> Result<Node<TId, net::SocketAddr>, D::Error> {
         d.read_struct("Node", 2, |d| {
-            let addr = try!(d.read_struct_field("address", 0, |d2| {
-                let s = try!(d2.read_str());
+            let addr = d.read_struct_field("address", 0, |d2| {
+                let s = d2.read_str()?;
                 match FromStr::from_str(&s) {
                     Ok(addr) => Ok(addr),
                     Err(e) => {
@@ -206,10 +206,9 @@ where
                         Err(d2.error(&err))
                     }
                 }
-            }));
+            })?;
 
-            let id = try!(d.read_struct_field("id", 1, TId::decode));
-
+            let id = d.read_struct_field("id", 1, TId::decode)?;
             Ok(Node {
                 address: addr,
                 id: id,
