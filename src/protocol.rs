@@ -48,5 +48,5 @@ pub trait Protocol: Send {
     /// Parse request from binary data.
     fn parse_request(&self, data: &[u8]) -> Request<Self::Id, Self::Addr, Self::Value>;
     /// Format response to binary data.
-    fn format_response(&self, Response<Self::Id, Self::Addr, Self::Value>) -> Vec<u8>;
+    fn format_response(&self, _: Response<Self::Id, Self::Addr, Self::Value>) -> Vec<u8>;
 }

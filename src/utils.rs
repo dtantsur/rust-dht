@@ -24,7 +24,7 @@ pub mod test {
 
     pub fn new_node_with_port(id: IdType, port: u16) -> Node<IdType, net::SocketAddr> {
         Node {
-            id: id,
+            id,
             address: net::SocketAddr::V4(net::SocketAddrV4::new(
                 net::Ipv4Addr::new(127, 0, 0, 1),
                 port,
