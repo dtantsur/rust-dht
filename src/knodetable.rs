@@ -65,8 +65,8 @@ where
         hash_size: usize,
     ) -> KNodeTable<TId, TAddr> {
         KNodeTable {
-            this_id: this_id,
-            hash_size: hash_size,
+            this_id,
+            hash_size,
             buckets: (0..hash_size).map(|_| KBucket::new(bucket_size)).collect(),
         }
     }
@@ -85,11 +85,10 @@ where
         debug_assert!(!diff.is_zero());
         let res = diff.bits() - 1;
         if res >= self.hash_size {
-            panic!(format!(
-                "Distance between IDs {:?} and {:?} is {:?}, which is \
+            panic!("Distance between IDs {:?} and {:?} is {:?}, which is \
                  greater than the hash size ({:?})",
                 id, self.this_id, res, self.hash_size
-            ));
+            );
         }
         debug!(
             "ID {:?} relative to own ID {:?} falls into bucket {:?}",

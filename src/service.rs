@@ -84,10 +84,10 @@ where
             clean_needed: false,
         };
         Service {
-            handler: handler,
-            node_id: node_id,
-            table: table,
-            data: data,
+            handler,
+            node_id,
+            table,
+            data,
         }
     }
 

@@ -211,7 +211,7 @@ where
             let id = d.read_struct_field("id", 1, TId::decode)?;
             Ok(Node {
                 address: addr,
-                id: id,
+                id,
             })
         })
     }
